@@ -447,6 +447,7 @@
 !               -> Needed to propagate across tripolar seam.
       REAL, ALLOCATABLE       :: FIELD(:)
 !/TRPL      REAL, ALLOCATABLE       :: FIELD_180FLIP(:)
+!/TRPL      REAL, ALLOCATABLE       :: FIELD_180FLIPb(:)
       REAL                    :: TMP1(4), TMP2(3), TMP3(2), TMP4(2)
 !/IC3 REAL, ALLOCATABLE       :: WN_I(:)
 !/REFRX REAL, ALLOCATABLE       :: CIK(:)
@@ -582,6 +583,9 @@
       IF( RGLGRD .AND. .NOT. FLOMP ) THEN 
          ALLOCATE ( FIELD(1-NY:NY*(NX+2)) )     
 !/TRPL         ALLOCATE ( FIELD_180FLIP(1-NY:NY*(NX+2)) )
+!/TRPL         ALLOCATE ( FIELD_180FLIPb(1-NY:NY*(NX+2)) )
+!/TRPL         FIELD_180FLIP(:) = 0.0
+!/TRPL         FIELD_180FLIPb(:) = 0.0
       ENDIF
 !
 !/SMC !!Li   Otherwise use sea point only field
@@ -1612,7 +1616,7 @@
                            ELSE
                              IXrel = IX
                            END IF
-                           if (Alphatp(iy,ixrel)<1)&
+                           !if (Alphatp(iy,ixrel)<1)&
 !/PR1                      CALL W3KTP1 ( ISEA, FACTH, FACK, CTHG0S(ISEA), &
 !/PR1                           CG(:,ISEA), WN(:,ISEA), DEPTH,            &
 !/PR1                           DDDX(IY,IXrel), DDDY(IY,IXrel), CX(ISEA),       &
@@ -1734,6 +1738,7 @@
 !/MPI         CALL MPI_STARTALL (NRQSG1, IRQSG1(1,1), IERR_MPI)
 !/MPI         CALL MPI_STARTALL (NRQSG1, IRQSG1(1,2), IERR_MPI)
 !/MPI         CALL MPI_STARTALL (NRQSG1, IRQSG1(1,3), IERR_MPI)
+!/MPI         CALL MPI_STARTALL (NRQSG1, IRQSG1(1,4), IERR_MPI)
 !/MPI       END IF
 !
 !/OMPX/!$OMP PARALLEL PRIVATE (ISPEC,FIELD)
@@ -1742,34 +1747,40 @@
 !/DEBUGRUN        FLUSH(740+IAPROC)
 
             IF ( FLOMP ) ALLOCATE ( FIELD(1-NY:NY*(NX+2)) )
+            FIELD(:) = 0.0
 !/TRPL            IF ( FLOMP ) ALLOCATE ( FIELD_180FLIP(1-NY:NY*(NX+2)) )
+!/TRPL            IF ( FLOMP ) ALLOCATE ( FIELD_180FLIPb(1-NY:NY*(NX+2)) )
+!/TRPL            FIELD_180FLIP(:) = 0.0
+!/TRPL            FIELD_180FLIPb(:) = 0.0
 !
 !/OMPX/!$OMP DO SCHEDULE (DYNAMIC,1)
 !
             DO ISPEC=1, NSPEC
+!/TRPL                      ITH = 1 + MOD(ISPEC-1,NTH)
+!/TRPL                      IK = 1 + (ISPEC-1)/NTH
+!/TRPL                      ITH_180FLIP = 1 + MOD(ITH+NTH/2-1,NTH) 
+!/TRPL                      ISPEC_180FLIP  = ITH_180FLIP+(IK-1)*NTH 
+              FIELD = 0.0
+              FIELD_180flip = 0.0
               IF ( IAPPRO(ISPEC) .EQ. IAPROC ) THEN
                 IF (.NOT.LPDLIB .AND. RGLGRD) THEN
 !/TRPL                   IF (.NOT. ICLOSE.EQ.ICLOSE_TRPL) THEN
                       CALL W3GATH ( ISPEC, FIELD )
 !/TRPL                   ELSE
-!/TRPL                      ITH = 1 + MOD(ISPEC-1,NTH)
-!/TRPL                      IK = 1 + (ISPEC-1)/NTH
-!/TRPL                      ITH_180FLIP = 1 + MOD(ITH+NTH/2-1,NTH) 
-!/TRPL                      ISPEC_180FLIP  = ITH_180FLIP+(IK-1)*NTH 
 !/TRPL                      CALL W3GATH ( ISPEC,FIELD,ISPEC_180FLIP, FIELD_180FLIP )
 !/TRPL                   ENDIF
                 ENDIF
 !/SMC !!Li   Otherwise use SMC sub to gether field
 !/SMC                CALL W3GATHSMC ( ISPEC, FIELD )
-!
+
                 IF (GTYPE .NE. UNGTYPE) THEN
-                  IF (ICLOSE.EQ.ICLOSE_TRPL) THEN
-!/PR1               CALL W3XYP1 ( ISPEC, DTG, MAPSTA, FIELD, VGX, VGY, FIELD_180FLIP )
+                   IF (ICLOSE.EQ.ICLOSE_TRPL .AND. ITH<NTH/2) THEN
+!/PR1               CALL W3XYP1 ( ISPEC, DTG, MAPSTA, FIELD, VGX, VGY, ISPEC_180flip, FIELD_180flip )
 !/PR2               WRITE(*,*)'TP progogation not supported for pr2'
 !/PR2               STOP
 !/PR3               WRITE(*,*)'TP progogation not supported for pr3'
 !/PR3               STOP
-                  ELSE
+                  ELSEIF (ICLOSE.NE.ICLOSE_TRPL) THEN
 !/PR1               CALL W3XYP1 ( ISPEC, DTG, MAPSTA, FIELD, VGX, VGY )
 !/PR2               CALL W3XYP2 ( ISPEC, DTG, MAPSTA, MAPFS, FIELD, VGX, VGY )
 !/PR3               CALL W3XYP3 ( ISPEC, DTG, MAPSTA, MAPFS, FIELD, VGX, VGY )
@@ -1790,7 +1801,11 @@
 !/PRX                              FIELD, VGX, VGY, UGDTUPDATE )
 !/MPI             END IF
                 END IF
-                IF (.NOT.LPDLIB .AND. RGLGRD) CALL W3SCAT ( ISPEC, MAPSTA, FIELD )
+                IF (.NOT.LPDLIB .AND. RGLGRD) THEN
+                   !if (ITH<NTH/2) THEN
+                   CALL W3SCAT ( ISPEC, MAPSTA, FIELD, ISPEC_180FLIP, FIELD_180FLIP )
+                   !endif
+                ENDIf
 !/SMC !!Li   Otherwise use SMC sub to scatter field
 !/SMC           CALL W3SCATSMC ( ISPEC, MAPSTA, FIELD )
 !
@@ -1801,13 +1816,14 @@
 !/MPI         ALLOCATE ( STATCO(MPI_STATUS_SIZE,NRQSG1) )
 !/MPI         CALL MPI_WAITALL (NRQSG1, IRQSG1(1,1), STATCO, &
 !/MPI                           IERR_MPI)
+!/MPI         CALL MPI_WAITALL (NRQSG1, IRQSG1(1,3), STATCO, &
+!/MPI                           IERR_MPI)
 !/MPI         CALL MPI_WAITALL (NRQSG1, IRQSG1(1,2), STATCO, &
 !/MPI                           IERR_MPI)
-!/MPI         CALL MPI_WAITALL (NRQSG1, IRQSG1(1,3), STATCO, &
+!/MPI         CALL MPI_WAITALL (NRQSG1, IRQSG1(1,4), STATCO, &
 !/MPI                           IERR_MPI)
 !/MPI         DEALLOCATE ( STATCO )
 !/MPI         END IF
-
 !/MEMCHECK       write(740+IAPROC,*) 'memcheck_____:', 'WW3_WAVE TIME LOOP 17'
 !/MEMCHECK       call getMallocInfo(mallinfos)
 !/MEMCHECK       call printMallInfo(IAPROC,mallInfos)
@@ -2810,9 +2826,12 @@
 !
 !/MPI      IF ( BSTAT(IBFLOC) .EQ. 2 ) THEN
 !/MPI        IOFF =  1 + (BISPL(IBFLOC)-1)*NRQSG2
-!/MPI        IF ( NRQSG2 .GT. 0 ) CALL                              &
-!/MPI             MPI_WAITALL ( NRQSG2, IRQSG2(IOFF,2),             &
+!/MPI        IF ( NRQSG2 .GT. 0 ) THEN
+!/MPI             CALL MPI_WAITALL ( NRQSG2, IRQSG2(IOFF,2),             &
 !/MPI                           STATUS, IERR_MPI )
+!/MPI             CALL MPI_WAITALL ( NRQSG2, IRQSG2(IOFF,4),             &
+!/MPI                           STATUS, IERR_MPI )
+!/MPI        ENDIF
 !/MPI        BSTAT(IBFLOC) = 0
 !/MPIT       STRT(13:13) = 'S'
 !/MPI      ENDIF
@@ -2932,7 +2951,7 @@
 !/
       END SUBROUTINE W3GATH
 !/ ------------------------------------------------------------------- /
-      SUBROUTINE W3SCAT ( ISPEC, MAPSTA, FIELD )
+      SUBROUTINE W3SCAT ( ISPEC, MAPSTA, FIELD, ISPEC2,FIELD2 )
 !/
 !/                  +-----------------------------------+
 !/                  | WAVEWATCH III           NOAA/NCEP |
@@ -3014,7 +3033,7 @@
       USE W3GDATMD, ONLY: NSPEC, NX, NY, NSEA, NSEAL, MAPSF
       USE W3WDATMD, ONLY: A => VA
 !/MPI      USE W3ADATMD, ONLY: MPIBUF, BSTAT, IBFLOC, ISPLOC, BISPL, &
-!/MPI                          NSPLOC, NRQSG2, IRQSG2, SSTORE
+!/MPI                          NSPLOC, NRQSG2, IRQSG2, SSTORE, SSTORE2
       USE W3ODATMD, ONLY: NDST
 !/MPI      USE W3ODATMD, ONLY: IAPROC, NAPROC
       USE CONSTANTS, ONLY : LPDLIB
@@ -3029,6 +3048,8 @@
 !/
       INTEGER, INTENT(IN)     :: ISPEC, MAPSTA(NY*NX)
       REAL, INTENT(IN)        :: FIELD(1-NY:NY*(NX+2))
+      INTEGER, OPTIONAL, INTENT(IN)     :: ISPEC2
+      REAL, OPTIONAL, INTENT(IN)        :: FIELD2(1-NY:NY*(NX+2))
 !/
 !/ ------------------------------------------------------------------- /
 !/ Local parameters
@@ -3050,6 +3071,7 @@
 !/SHRD      DO ISEA=1, NSEA
 !/SHRD        IXY           = MAPSF(ISEA,3)
 !/SHRD        IF ( MAPSTA(IXY) .GE. 1 ) A(ISPEC,ISEA) = FIELD(IXY)
+!/SHRD        IF ( MAPSTA(IXY) .GE. 1 ) A(ISPEC2,ISEA) = FIELD2(IXY)
 !/SHRD        END DO
 !
 !/SHRD      RETURN
@@ -3069,13 +3091,16 @@
 !/MPI      DO ISEA=1, NSEA
 !/MPI        IXY    = MAPSF(ISEA,3)
 !/MPI        IF ( MAPSTA(IXY) .GE. 1 ) SSTORE(ISEA,IBFLOC) = FIELD(IXY)
+!/MPI        IF ( MAPSTA(IXY) .GE. 1 ) SSTORE2(ISEA,IBFLOC) = FIELD2(IXY)
 !/MPI        END DO
 !
 ! 2.c Send spectral densities to appropriate remote
 !
 !/MPI      IOFF   = 1 + (ISPLOC-1)*NRQSG2
-!/MPI      IF ( NRQSG2 .GT. 0 ) CALL                                  &
-!/MPI           MPI_STARTALL ( NRQSG2, IRQSG2(IOFF,2), IERR_MPI )
+!/MPI      IF ( NRQSG2 .GT. 0 ) THEN
+!/MPI           CALL MPI_STARTALL ( NRQSG2, IRQSG2(IOFF,2), IERR_MPI )
+!/MPI           CALL MPI_STARTALL ( NRQSG2, IRQSG2(IOFF,4), IERR_MPI )
+!/MPI      ENDIF
 !/MPI      BSTAT(IBFLOC) = 2
 !/MPIT      STRT(12:12) = 's'
 !/MPIT      WRITE (STRT(1:7),'(I2,I5)') BSTAT(IBFLOC), ISPLOC
@@ -3087,6 +3112,7 @@
 !/MPI        CALL INIT_GET_ISEA(ISEA, JSEA)
 !/MPI        IXY    = MAPSF(ISEA,3)
 !/MPI        IF (MAPSTA(IXY) .GE. 1) A(ISPEC,JSEA) = SSTORE(ISEA,IBFLOC)
+!/MPI        IF (MAPSTA(IXY) .GE. 1) A(ISPEC2,JSEA) = SSTORE2(ISEA,IBFLOC)
 !/MPI        END DO
 !
 ! 2.e Check if any sends have finished
@@ -3106,6 +3132,15 @@
 !/MPI            IF ( DONE .AND. NRQSG2.GT.0 ) CALL                   &
 !/MPI                     MPI_WAITALL ( NRQSG2, IRQSG2(IOFF,2),       &
 !/MPI                                   STATUS, IERR_MPI )
+!/MPI            IF ( NRQSG2 .GT. 0 ) THEN
+!/MPI               CALL MPI_TESTALL ( NRQSG2, IRQSG2(IOFF,4), DONE,  &
+!/MPI                                 STATUS, IERR_MPI )
+!/MPI              ELSE
+!/MPI                DONE   = .TRUE.
+!/MPI              END IF
+!/MPI            IF ( DONE .AND. NRQSG2.GT.0 ) CALL                   &
+!/MPI                     MPI_WAITALL ( NRQSG2, IRQSG2(IOFF,4),       &
+!/MPI                                   STATUS, IERR_MPI )
 !/MPI            IF ( DONE ) THEN
 !/MPI                BSTAT(IB0) = 0
 !/MPIT                STRT        = STR(IB0)
@@ -3123,9 +3158,12 @@
 !/MPI          DO IB0=1, MPIBUF
 !/MPI            IF ( BSTAT(IB0) .EQ. 2 ) THEN
 !/MPI                IOFF   = 1 + (BISPL(IB0)-1)*NRQSG2
-!/MPI                IF ( NRQSG2 .GT. 0 ) CALL                        &
-!/MPI                     MPI_WAITALL ( NRQSG2, IRQSG2(IOFF,2),       &
+!/MPI                IF ( NRQSG2 .GT. 0 ) THEN
+!/MPI                  CALL MPI_WAITALL ( NRQSG2, IRQSG2(IOFF,2),       &
 !/MPI                                   STATUS, IERR_MPI )
+!/MPI                  CALL MPI_WAITALL ( NRQSG2, IRQSG2(IOFF,4),       &
+!/MPI                                   STATUS, IERR_MPI )
+!/MPI                ENDIF
 !/MPI                BSTAT(IB0) = 0
 !/MPIT                STRT        = STR(IB0)
 !/MPIT                WRITE (STRT(1:7),'(I2,I5)') BSTAT(IB0), BISPL(IB0)
