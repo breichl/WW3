@@ -255,7 +255,7 @@
 !/
       END SUBROUTINE W3MAP1
 !/ ------------------------------------------------------------------- /
-      SUBROUTINE W3XYP1 ( ISP, DTG, MAPSTA, FIELD, VGX, VGY, FIELD_180 )
+      SUBROUTINE W3XYP1( ISP, DTG, MAPSTA, FIELD, VGX, VGY, ISP_180, FIELD_180 )
 !/
 !/                  +-----------------------------------+
 !/                  | WAVEWATCH III           NOAA/NCEP |
@@ -407,7 +407,8 @@
       INTEGER, INTENT(IN)        :: ISP, MAPSTA(NY*NX)
       REAL, INTENT(IN)           :: DTG, VGX, VGY
       REAL, INTENT(INOUT)        :: FIELD(1-NY:NY*(NX+2))
-      REAL, OPTIONAL, INTENT(IN) :: FIELD_180(1-NY:NY*(NX+2))
+      INTEGER, OPTIONAL, INTENT(IN) :: ISP_180
+      REAL, OPTIONAL, INTENT(INOUT) :: FIELD_180(1-NY:NY*(NX+2))
 !/
 !/ ------------------------------------------------------------------ /
 !/ Local parameters
@@ -415,12 +416,15 @@
       INTEGER                 :: IK, ITH, NTLOC, ITLOC, ISEA, IXY,    &
                                  IY0, IX, IY, JXN, JXP, JYN, JYP,     &
                                  IBI, NYMAX
+      INTEGER                 :: ITH_180
 !/T3      INTEGER                 ::  IXF, IYF
 !/S      INTEGER, SAVE           :: IENT = 0
       REAL                    :: CG0, CGL, CGA, CC, CGN
       REAL                    :: DTLOC,DTRAD, VCB
       REAL                    :: RD1, RD2
       REAL                    :: CP, CQ
+      REAL :: CGA_180, CP_180, CQ_180, VCB_180
+
 !/T3      REAL                    :: AOLD
 !/
 !/ Automatic work arrays
@@ -428,11 +432,17 @@
       REAL                    :: CXTOT2D(NY,NX)
       REAL                    :: CYTOT2D(NY,NX)
       REAL                    :: FLD2D(NY+1,NX+1)
-!/TRPL      REAL                    :: FLD2D_180(NY+1,NX+1)
       REAL                    :: VCX2D(NY,NX+1)
       REAL                    :: VCY2D(NY+1,NX)
       REAL                    :: VFLX2D(1:NY,0:NX)
       REAL                    :: VFLY2D(NY,NX)
+!/TRPL      REAL                    :: CXTOT2D_180(NY,NX)
+!/TRPL      REAL                    :: CYTOT2D_180(NY,NX)
+!/TRPL      REAL                    :: FLD2D_180(NY+1,NX+1)
+!/TRPL      REAL                    :: VCX2D_180(NY,NX+1)
+!/TRPL      REAL                    :: VCY2D_180(NY+1,NX)
+!/TRPL      REAL                    :: VFLX2D_180(1:NY,0:NX)
+!/TRPL      REAL                    :: VFLY2D_180(NY,NX)
 
 !/
 !/ ------------------------------------------------------------------- /
@@ -456,6 +466,7 @@
 ! 1.a Set constants
 !
       ITH    = 1 + MOD(ISP-1,NTH)
+      ITH_180    = 1 + MOD(ISP_180-1,NTH)
       IK     = 1 + (ISP-1)/NTH
 !
       CG0    = 0.575 * GRAV / SIG(1)
@@ -464,12 +475,15 @@
       IF ( FLCUR ) THEN
           CGA    = SQRT(MAXVAL((CGL*ECOS(ITH)+CX(1:NSEA))**2          &
                               +(CGL*ESIN(ITH)+CY(1:NSEA))**2))
+          CGA_180    = SQRT(MAXVAL((CGL*ECOS(ITH_180)+CX(1:NSEA))**2          &
+                              +(CGL*ESIN(ITH_180)+CY(1:NSEA))**2))
           CC     = SQRT(MAXVAL(CX(1:NSEA)**2+CY(1:NSEA)**2))
 !/MGP          CGA    = SQRT(MAXVAL((CGL*ECOS(ITH)+CX(1:NSEA)-VGX)**2      &
 !/MGP                              +(CGL*ESIN(ITH)+CY(1:NSEA)-VGY)**2))
 !/MGP          CC     = SQRT(MAXVAL((CX(1:NSEA)-VGX)**2+(CY(1:NSEA)-VGY)**2))
         ELSE
           CGA    = CGL
+          CGA_180    = CGL
 !/MGP          CGA    = SQRT((CGL*ECOS(ITH)-VGX)**2+(CGL*ESIN(ITH)-VGY)**2)
           CC     = 0.
         END IF
@@ -521,12 +535,16 @@
              FLD2D(IY,IX) = FIELD(IXY) / CG(IK,ISEA)
              FLD2D_180(IY,IX) = FIELD_180(IXY) / CG(IK,ISEA)
              CXTOT2D(IY,IX) = ECOS(ITH) * CG(IK,ISEA)
+             CXTOT2D_180(IY,IX) = ECOS(ITH_180) * CG(IK,ISEA)
+             CYTOT2D(IY,IX) = ESIN(ITH) * CG(IK,ISEA)
+             CYTOT2D_180(IY,IX) = ESIN(ITH_180) * CG(IK,ISEA)
           else
              FLD2D(IY,IX) = FIELD(IXY) / CG(IK,ISEA) * CLATS(ISEA)
              CXTOT2D(IY,IX) = ECOS(ITH) * CG(IK,ISEA) / CLATS(ISEA)
+             CYTOT2D(IY,IX) = ESIN(ITH) * CG(IK,ISEA)
           endif
 
-          CYTOT2D(IY,IX) = ESIN(ITH) * CG(IK,ISEA)
+
 !/MGP          CXTOT2D(IY,IX) = CXTOT2D(IY,IX) - VGX/CLATS(ISEA)
 !/MGP          CYTOT2D(IY,IX) = CYTOT2D(IY,IX) - VGY
 
@@ -545,6 +563,8 @@
                  CXTOT2D(IY,IX) = CXTOT2D(IY,IX) + CX(ISEA)/CLATS(ISEA)
               else
                  CXTOT2D(IY,IX) = CXTOT2D(IY,IX) + CX(ISEA)
+                 CXTOT2D_180(IY,IX) = CXTOT2D_180(IY,IX) + CX(ISEA)
+                 CYTOT2D_180(IY,IX) = CYTOT2D_180(IY,IX) + CY(ISEA)
               endif
               CYTOT2D(IY,IX) = CYTOT2D(IY,IX) + CY(ISEA)
 
@@ -557,6 +577,8 @@
               IY     = MAPSF(ISEA,2)
               if (iclose.eq.iclose_trpl) then
                  CP=CXTOT2D(IY,IX)*(DPDXtp(IY,IX))+CYTOT2D(IY,IX)*(DPDYtp(IY,IX))
+                 CP_180=CXTOT2D_180(IY,IX)*(DPDXtp(IY,IX))+CYTOT2D_180(IY,IX)*(DPDYtp(IY,IX))
+                 VCX2D_180(IY,IX) = CP_180*DTRAD
               else
                  CP=CXTOT2D(IY,IX)*(DPDX(IY,IX))+CYTOT2D(IY,IX)*(DPDY(IY,IX))
               endif
@@ -572,6 +594,8 @@
               IY     = MAPSF(ISEA,2)
               if (iclose.eq.iclose_trpl) then
                  CQ=CXTOT2D(IY,IX)*DQDXtp(IY,IX)+CYTOT2D(IY,IX)*DQDYtp(IY,IX)
+                 CQ_180=CXTOT2D_180(IY,IX)*DQDXtp(IY,IX)+CYTOT2D_180(IY,IX)*DQDYtp(IY,IX)
+                 VCY2D_180(IY,IX) = CQ_180*DTRAD
               else
                  CQ=CXTOT2D(IY,IX)*DQDX(IY,IX)+CYTOT2D(IY,IX)*DQDY(IY,IX)
               endif
@@ -600,9 +624,11 @@
 !/NEC/!CDIR NODEP
             DO IY=1, NY
               FLD2D(IY,NX+1)=FLD2D(IY,1)
-              IF ( ICLOSE.EQ.ICLOSE_TRPL ) &
-                   FLD2D_180(IY,NX+1)=FLD2D_180(IY,1)
               VCX2D(IY,NX+1)=VCX2D(IY,1)
+              IF ( ICLOSE.EQ.ICLOSE_TRPL ) THEN
+                 FLD2D_180(IY,NX+1)=FLD2D_180(IY,1)
+                 VCX2D_180(IY,NX+1)=VCX2D_180(IY,1)
+              ENDIF
 !/T1              WRITE (NDST,9025) IY, FLD2D(IY,NX+1), VCX2D(IY,NX+1)
             END DO
         END IF
@@ -614,6 +640,8 @@
 !...........next point: j+1: tripole: j==>j+1==>j and i==>ni-i+1
               FLD2D(NY+1,IX)=FLD2D_180(NY,NX-IX+1)
               VCY2D(NY+1,IX)=VCY2D(NY,NX-IX+1)
+              FLD2D_180(NY+1,IX)=FLD2D(NY,NX-IX+1)
+              VCY2D_180(NY+1,IX)=VCY2D_180(NY,NX-IX+1)
             END DO
         END IF
 
@@ -631,6 +659,9 @@
               VCB       = FACVX(IXY) * ( VCX2D(IY,IX) + VCX2D(IY,IX+1) )
               VFLX2D(IY,IX) = MAX ( VCB , 0. ) * FLD2D(IY,IX)          &
                    + MIN ( VCB , 0. ) * FLD2D(IY,IX+1)
+              VCB_180     = FACVX(IXY) * ( VCX2D_180(IY,IX) + VCX2D_180(IY,IX+1) )
+              VFLX2D_180(IY,IX) = MAX ( VCB_180 , 0. ) * FLD2D_180(IY,IX)          &
+                   + MIN ( VCB_180 , 0. ) * FLD2D_180(IY,IX+1)
            END DO
         END DO
 !
@@ -644,6 +675,7 @@
 !/T2            WRITE (NDST,9032)
             DO IY=1, NY
               VFLX2D(IY,0) = VFLX2D(IY,NX)
+              VFLX2D_180(IY,0) = VFLX2D_180(IY,NX)
 !/T2              WRITE (NDST,9033) IY, VFLX2D(IY,0)
             END DO
         END IF
@@ -656,6 +688,9 @@
               VCB       = FACVY(IXY) * ( VCY2D(IY,IX) + VCY2D(IY+1,IX) )
               VFLY2D(IY,IX) = MAX ( VCB , 0. ) * FLD2D(IY,IX)          &
                             + MIN ( VCB , 0. ) * FLD2D(IY+1,IX)
+              VCB_180       = FACVY(IXY) * ( VCY2D_180(IY,IX) + VCY2D_180(IY+1,IX) )
+              VFLY2D_180(IY,IX) = MAX ( VCB_180 , 0. ) * FLD2D_180(IY,IX)          &
+                            + MIN ( VCB_180 , 0. ) * FLD2D_180(IY+1,IX)
            END DO
         END DO
 !
@@ -677,6 +712,9 @@
               VCB       = FACVY(IXY) * ( VCY2D(IY,IX) + VCY2D(IY+1,IX) )
               VFLY2D(IY,IX) = MAX ( VCB , 0. ) * FLD2D(IY,IX)          &
                             + MIN ( VCB , 0. ) * FLD2D(IY+1,IX)
+              VCB_180       = FACVY(IXY) * ( VCY2D_180(IY,IX) + VCY2D_180(IY+1,IX) )
+              VFLY2D_180(IY,IX) = MAX ( VCB_180 , 0. ) * FLD2D_180(IY,IX)          &
+                            + MIN ( VCB_180 , 0. ) * FLD2D_180(IY+1,IX)
            END DO
 !
 !/OMPH/!$OMP END PARALLEL DO
@@ -727,6 +765,11 @@
                                  - ATRNX(IXY,JXP) * VFLX2D(IY,IX)     &
                                  + ATRNY(IXY,JYN) * VFLY2D(IY-1,IX)   &
                                  - ATRNY(IXY,JYP) * VFLY2D(IY,IX)   
+             FLD2D_180(IY,IX) =   FLD2D_180(IY,IX)                            &
+                                 + ATRNX(IXY,JXN) * VFLX2D_180(IY,IX-1)   &
+                                 - ATRNX(IXY,JXP) * VFLX2D_180(IY,IX)     &
+                                 + ATRNY(IXY,JYN) * VFLY2D_180(IY-1,IX)   &
+                                 - ATRNY(IXY,JYP) * VFLY2D_180(IY,IX)   
 
 !/T3              WRITE (NDST,9041) ISEA, IXY, IXY-NY, IXY-1,         &
 !/T3                 VFLX2D(IY,IX-1), VFLX2D(IY,IX), VFLY2D(IY-1,IX), &
@@ -742,6 +785,7 @@
              FLD2D(IY,IX) = CG(IK,ISEA) / CLATS(ISEA) * FLD2D(IY,IX)
           else
              FLD2D(IY,IX) = CG(IK,ISEA) * FLD2D(IY,IX)
+             FLD2D_180(IY,IX) = CG(IK,ISEA) * FLD2D_180(IY,IX)
           endif
         END DO !  DO ISEA=1, NSEA
 !
@@ -751,6 +795,7 @@
 ! Transform FIELD back to physical space, i.e. may be curvilinear
         if (iclose.eq.iclose_trpl) then
            FLD2D(1:NY,1:NX)=FLD2D(1:NY,1:NX)/GSQRTtp(1:NY,1:NX)
+           FLD2D_180(1:NY,1:NX)=FLD2D_180(1:NY,1:NX)/GSQRTtp(1:NY,1:NX)
         else
            FLD2D(1:NY,1:NX)=FLD2D(1:NY,1:NX)/GSQRT(1:NY,1:NX)
         endif
@@ -772,6 +817,7 @@
               IX    = MAPSF(ISBPI(IBI),1)
               IY    = MAPSF(ISBPI(IBI),2)
               FLD2D(IY,IX) = RD1*BBPI0(ISP,IBI) + RD2*BBPIN(ISP,IBI)
+              FLD2D_180(IY,IX) = RD1*BBPI0(ISP_180,IBI) + RD2*BBPIN(ISP_180,IBI)
            END DO
         END IF
 !
@@ -782,6 +828,7 @@
            IY     = MAPSF(ISEA,2)
            IXY    = MAPSF(ISEA,3)
            FIELD(IXY) = FLD2D(IY,IX)
+           FIELD_180(IXY) = FLD2D_180(IY,IX)
         END DO
 !
 ! ... End of partial time step loop
@@ -990,19 +1037,19 @@
 ! 2.a Set slope filter for depth refraction
 !
           FDDMAX = 0.
-          if (iclose.eq.iclose_trpl) then
-            FDG    = max(-1.e-1,min(1.e-1,FACTH * CTHG0))
-            FDGp   = max(-1.e-1,min(1.e-1,-FACTH * DERA*(DADP*DPDX+DADP*DPDY)))
-            FDGq   = max(-1.e-1,min(1.e-1,-FACTH * DERA*(DADQ*DQDX+DADQ*DQDY)))
-            CosAlpha = cos(Alpha*DERA)
-            SinAlpha = sin(Alpha*DERA)
-          else
+          !if (iclose.eq.iclose_trpl) then
+          !  FDG    = max(-1.e-1,min(1.e-1,FACTH * CTHG0))
+          !  FDGp   = max(-1.e-1,min(1.e-1,-FACTH * DERA*(DADP*DPDX+DADP*DPDY)))
+          !  FDGq   = max(-1.e-1,min(1.e-1,-FACTH * DERA*(DADQ*DQDX+DADQ*DQDY)))
+          ! CosAlpha = cos(Alpha*DERA)
+          ! SinAlpha = sin(Alpha*DERA)
+          !else
              FDG = FACTH * CTHG0
-             FDGp = 0.0
-             FDGq = 0.0
-             CosAlpha = 1.0
-             SinAlpha = 0.0
-          endif
+          !   FDGp = 0.0
+          !   FDGq = 0.0
+          !   CosAlpha = 1.0
+          !   SinAlpha = 0.0
+          !endif
           DO ITH=1, NTH
             FDDMAX = MAX ( FDDMAX , ABS (                             &
                ESIN(ITH)*DDDX - ECOS(ITH)*DDDY ) )
@@ -1011,8 +1058,8 @@
           DO IK=1, NK
             FRK(IK) = FACTH * DSDD(IK) / WN(IK)
             FRK(IK) = FRK(IK) / MAX ( 1. , FRK(IK)*FDDMAX/CTMAX )
-            FRGp(IK) = FDGp * CG(IK)
-            FRGq(IK) = FDGq * CG(IK)
+            !FRGp(IK) = FDGp * CG(IK)
+            !FRGq(IK) = FDGq * CG(IK)
             FRG(IK)  = FDG * CG(IK)
             END DO
 !
@@ -1023,16 +1070,15 @@
             !print*,'a',FRG(MAPWN(ISP)) * ECOS(ISP)
             !print*,'b',FRGx(MAPWN(ISP)) * ECOS(ISP)
             !print*,'c',FRGy(MAPWN(ISP)) * ESIN(ISP) 
-            if (abs(FRG(MAPWN(ISP)) * ECOS(ISP))>A) &
-                 A=FRG(MAPWN(ISP)) * (ECOS(ISP)*cosAlpha-ESIN(ISP)*sinAlpha)
-            if (abs(FRGp(MAPWN(ISP)) * ECOS(ISP))>B) &
-                 B=abs(FRGp(MAPWN(ISP)) * ECOS(ISP))
-            if (abs(FRGq(MAPWN(ISP)) * ESIN(ISP))>C) &
-                 C=abs(FRGq(MAPWN(ISP)) * ESIN(ISP))
-
-            VCTH(ISP) = FRGp(MAPWN(ISP)) * ECOS(ISP)+                 &
-                        FRGq(MAPWN(ISP)) * ESIN(ISP)+                 &
-                        FRG(MAPWN(ISP)) * (ECOS(ISP)*cosAlpha-ESIN(ISP)*sinAlpha) &
+            !if (abs(FRG(MAPWN(ISP)) * ECOS(ISP))>A) &
+            !     A=FRG(MAPWN(ISP)) * (ECOS(ISP)*cosAlpha-ESIN(ISP)*sinAlpha)
+            !if (abs(FRGp(MAPWN(ISP)) * ECOS(ISP))>B) &
+            !     B=abs(FRGp(MAPWN(ISP)) * ECOS(ISP))
+            !if (abs(FRGq(MAPWN(ISP)) * ESIN(ISP))>C) &
+            !     C=abs(FRGq(MAPWN(ISP)) * ESIN(ISP))
+            VCTH(ISP) = FRG(MAPWN(ISP)) * ECOS(ISP)&!+                 &
+            !            FRGq(MAPWN(ISP)) * ESIN(ISP)+                 &
+            !            FRG(MAPWN(ISP)) * (ECOS(ISP)*cosAlpha-ESIN(ISP)*sinAlpha) &
               + FRK(MAPWN(ISP)) * ( ESIN(ISP)*DDDX - ECOS(ISP)*DDDY )
             END DO
 !            if (Alpha<1) &
@@ -1063,13 +1109,13 @@
 !/REFRX          DO IK=1, NK
 !/REFRX            FRK(IK) = FACTH * CG(IK) * WN(IK) / SIG(IK)
 !/REFRX            FRK(IK) = FRK(IK) / MAX ( 1. , FRK(IK)*FDDMAX/CTMAX )
-!/REFRX            FRGx(IK) = FDGx * CG(IK)
-!/REFRX            FRGy(IK) = FDGy * CG(IK)
+!!/REFRX            FRGx(IK) = FDGx * CG(IK)
+!!/REFRX            FRGy(IK) = FDGy * CG(IK)
 !/REFRX          END DO
 !/REFRX          DO ISP=1, NSPEC
-!/REFRX            VCTH(ISP) = FRGx(MAPWN(ISP)) * ECOS(ISP)           &
-!/REFRX                        + FRGy(MAPWN(ISP)) * ESIN(ISP)         &
-!/REFRX              + FRK(MAPWN(ISP)) * ( ESIN(ISP)*DCDX(MAPWN(ISP)) &
+!!/REFRX            VCTH(ISP) = FRGx(MAPWN(ISP)) * ECOS(ISP)           &
+!!/REFRX                        + FRGy(MAPWN(ISP)) * ESIN(ISP)         &
+!/REFRX            VCTH(ISP) = FRG(MAPWN(ISP)) * ECOS(ISP)            &
 !/REFRX              - ECOS(ISP)*DCDY(MAPWN(ISP)) )
 !/REFRX          END DO
 !

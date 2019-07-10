@@ -500,7 +500,7 @@
 !/MPI        INTEGER               :: BSTAT(MPIBUF), BISPL(MPIBUF)
 !/MPI        INTEGER, POINTER      :: IRQSG1(:,:), IRQSG2(:,:)
 !/MPI        REAL, POINTER         :: GSTORE(:,:), GSTORE2(:,:), &
-!/MPI                                 SSTORE(:,:)
+!/MPI                                 SSTORE(:,:), SSTORE2(:,:)
         REAL, POINTER         :: SPPNT(:,:,:)
 !
         INTEGER               :: ITIME, IPASS, IDLAST, NSEALM
@@ -615,7 +615,7 @@
 !/MPI      INTEGER, POINTER        :: BSTAT(:), BISPL(:)
 !/MPI      INTEGER, POINTER        :: IRQSG1(:,:), IRQSG2(:,:)
 !/MPI      REAL, POINTER           :: GSTORE(:,:), GSTORE2(:,:),           &
-!/MPI                                 SSTORE(:,:)
+!/MPI                                 SSTORE(:,:), SSTORE2(:,:)
       REAL, POINTER           :: SPPNT(:,:,:)
 !
       INTEGER, POINTER        :: ITIME, IPASS, IDLAST, NSEALM
@@ -2849,6 +2849,7 @@
 !/MPI      GSTORE => WADATS(IMOD)%GSTORE
 !/MPI      GSTORE2 => WADATS(IMOD)%GSTORE2
 !/MPI      SSTORE => WADATS(IMOD)%SSTORE
+!/MPI      SSTORE2 => WADATS(IMOD)%SSTORE2
 !
       RETURN
 !
