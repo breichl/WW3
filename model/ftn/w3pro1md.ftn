@@ -489,6 +489,7 @@
         END IF
 !
       CGN    = 0.9999 * MAX ( CGA, CC, 0.001*CG0 )
+!      CGN_180    = 0.9999 * MAX ( CGA_180, CC, 0.001*CG0 )
 !
       NTLOC  = 1 + INT(DTG/(DTCFL*CG0/CGN))
       DTLOC  = DTG / REAL(NTLOC)
@@ -512,9 +513,15 @@
         CXTOT2D  = 0.
         CYTOT2D  = 0.
         FLD2D  = 0.
-!/TRPL        FLD2D_180(:,:) = 0.0
         VFLX2D  = 0.
         VFLY2D  = 0.
+!/TRPL        VCX2D_180 = 0.
+!/TRPL        VCY2D_180 = 0.
+!/TRPL        CXTOT2D_180  = 0.
+!/TRPL        CYTOT2D_180  = 0.
+!/TRPL        FLD2D_180  = 0.
+!/TRPL        VFLX2D_180  = 0.
+!/TRPL        VFLY2D_180  = 0.
 !
 ! 2.  Calculate field and velocities --------------------------------- *
 !
