@@ -36,7 +36,7 @@
 !/
 !/    Copyright 2009-2014 National Weather Service (NWS),
 !/       National Oceanic and Atmospheric Administration.  All rights
-!/       reserved.  WAVEWATCH III is a trademark of the NWS. 
+!/       reserved.  WAVEWATCH III is a trademark of the NWS.
 !/       No unauthorized use without permission.
 !/
 !  1. Purpose :
@@ -48,7 +48,7 @@
 !
 !      Name      Type  Scope    Description
 !     ----------------------------------------------------------------
-!      TRNMIN    R.P.  Private   Minimum transparancy for local 
+!      TRNMIN    R.P.  Private   Minimum transparancy for local
 !                                switching off of averaging.
 !     ----------------------------------------------------------------
 !
@@ -128,6 +128,7 @@
 !/    17-Dec-2004 : Multiple grid version.              ( version 3.06 )
 !/    09-Nov-2005 : Removing soft boundary option.      ( version 3.08 )
 !/    01-Apr-2008 : Bug fix sec. 4 MAPSTA range check.  ( version 3.13 )
+!/    02-Aug-2019 : Adapting for tripolar closure       ( version 7.xx )
 !/
 !  1. Purpose :
 !
@@ -145,6 +146,14 @@
 !       NMX1+1 - NMX2  Id. only (IX+1,IY) active.
 !
 !     The array MAPY2 has a similar layout varying IY instead of IX.
+!
+!     The upper bound on these arrays is set to NY-1 for grids that
+!     do not have tripolar closure, but to NY for cases of tripolar
+!     closure.  Two rows are duplicated at the top as a halo
+!     region so that the closure can be done in w3pro3 instead
+!     of modifying the actual propagation routines.  However,
+!     the model propagation scheme does not need to cross into the
+!     halo but can stop at NY.
 !
 !  3. Parameters :
 !
@@ -192,8 +201,8 @@
 !
 ! 10. Source code :
 !/ ------------------------------------------------------------------- /
-      USE W3GDATMD, ONLY: NK, NTH, NSPEC, NX, NY, NSEA, MAPSTA, MAPSF,& 
-                          GTYPE
+      USE W3GDATMD, ONLY: NK, NTH, NSPEC, NY, NX, NSEA, MAPSTA, MAPSF,&
+                          GTYPE, ICLOSE, ICLOSE_TRPL, NYP
       USE W3ADATMD, ONLY: NMX0, NMX1, NMX2, NMY0, NMY1, NMY2, NACT,   &
                           NCENT, MAPX2, MAPY2, MAPAXY, MAPCXY,        &
                           MAPTH2, MAPWN2
@@ -210,26 +219,34 @@
 !/
       INTEGER                 :: IX, IY, IXY0, IX2, IY2, IX0, IY0,    &
                                  ISEA, IK, ITH, ISP, ISP0, ISP2, NCENTC
+      INTEGER                 :: NY1
 !/S      INTEGER, SAVE           :: IENT = 0
-!/T      INTEGER                 :: MAPTXY(NY,NX), I, IXY
+!/T      INTEGER                 :: MAPTXY(NYP,NX), I, IXY
 !/T      INTEGER                 :: MAPTST(NK+2,NTH)
 !/
 !/ ------------------------------------------------------------------- /
 !/
 !/S      CALL STRACE (IENT, 'W3MAP3')
 !
-   IF (GTYPE .LT. 3) THEN
+
+      IF (ICLOSE.EQ.ICLOSE_TRPL) THEN
+        NY1 = NY
+      ELSE
+        NY1 = NY-1
+      END IF
+
+      IF (GTYPE .LT. 3) THEN
 ! 1.  Map MAPX2 ------------------------------------------------------ *
 ! 1.a Range 1 to NMX0
 !
 !/T      MAPTXY = 0.
 !
-      NMX0   = 0
-      DO IX=1, NX
-        IXY0   = (IX-1)*NY
-        IX2    = 1 + MOD(IX,NX)
-        DO IY=2, NY-1
-          IF ( MAPSTA(IY,IX).EQ.1 .AND. MAPSTA(IY,IX2).EQ.1 ) THEN
+        NMX0   = 0
+        DO IX=1, NX
+          IXY0   = (IX-1)*NYP
+          IX2    = 1 + MOD(IX,NX)
+          DO IY=2, NY1
+            IF ( MAPSTA(IY,IX).EQ.1 .AND. MAPSTA(IY,IX2).EQ.1 ) THEN
               NMX0   = NMX0 + 1
               MAPX2(NMX0) = IXY0 + IY
 !/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 1
@@ -239,12 +256,12 @@
 !
 ! 1.b Range NMX0+1 to NMX1
 !
-      NMX1   = NMX0
-      DO IX=1, NX
-        IXY0   = (IX-1)*NY
-        IX2    = 1 + MOD(IX,NX)
-        DO IY=2, NY-1
-          IF ( MAPSTA(IY,IX).EQ.1 .AND. MAPSTA(IY,IX2).NE.1 ) THEN
+        NMX1   = NMX0
+        DO IX=1, NX
+          IXY0   = (IX-1)*NYP
+          IX2    = 1 + MOD(IX,NX)
+          DO IY=2, NY1
+            IF ( MAPSTA(IY,IX).EQ.1 .AND. MAPSTA(IY,IX2).NE.1 ) THEN
               NMX1   = NMX1 + 1
               MAPX2(NMX1) = IXY0 + IY
 !/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 2
@@ -254,12 +271,12 @@
 !
 ! 1.c Range NMX1+1 to NMX2
 !
-      NMX2   = NMX1
-      DO IX=1, NX
-        IXY0   = (IX-1)*NY
-        IX2    = 1 + MOD(IX,NX)
-        DO IY=2, NY-1
-          IF ( MAPSTA(IY,IX).NE.1 .AND. MAPSTA(IY,IX2).EQ.1 ) THEN
+        NMX2   = NMX1
+        DO IX=1, NX
+          IXY0   = (IX-1)*NYP
+          IX2    = 1 + MOD(IX,NX)
+          DO IY=2, NY1
+            IF ( MAPSTA(IY,IX).NE.1 .AND. MAPSTA(IY,IX2).EQ.1 ) THEN
               NMX2   = NMX2 + 1
               MAPX2(NMX2) = IXY0 + IY
 !/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 4
@@ -278,48 +295,75 @@
 !
 !/T      MAPTXY = 0.
 !
-      NMY0   = 0
-      DO IX=1, NX
-        IXY0   = (IX-1)*NY
-        DO IY=1, NY-1
-          IY2    = IY + 1
-          IF ( MAPSTA(IY,IX).EQ.1 .AND. MAPSTA(IY2,IX).EQ.1 ) THEN
+        NMY0   = 0
+        DO IX=1, NX
+          IXY0   = (IX-1)*NYP
+          DO IY=1, NY-1
+            IY2    = IY + 1
+            IF ( MAPSTA(IY,IX).EQ.1 .AND. MAPSTA(IY2,IX).EQ.1 ) THEN
               NMY0   = NMY0 + 1
               MAPY2(NMY0) = IXY0 + IY
 !/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 1
             END IF
           END DO
+          IF (ICLOSE.EQ.ICLOSE_TRPL) THEN
+            IY = NY
+            IF ( MAPSTA(IY,IX).EQ.1 .AND. &
+                 MAPSTA(2*NY-IY,NX-IX+1).EQ.1 ) THEN
+              NMY0   = NMY0 + 1
+              MAPY2(NMY0) = IXY0 + IY
+!/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 1
+            END IF
+          END IF
         END DO
 !
 ! 2.b Range NMY0+1 to NMY1
 !
-      NMY1   = NMY0
-      DO IX=1, NX
-        IXY0   = (IX-1)*NY
-        DO IY=1, NY-1
-          IY2    = IY + 1
-          IF ( MAPSTA(IY,IX).EQ.1 .AND. MAPSTA(IY2,IX).NE.1 ) THEN
+        NMY1   = NMY0
+        DO IX=1, NX
+          IXY0   = (IX-1)*NYP
+          DO IY=1, NY-1
+            IY2    = IY + 1
+            IF ( MAPSTA(IY,IX).EQ.1 .AND. MAPSTA(IY2,IX).NE.1 ) THEN
               NMY1   = NMY1 + 1
               MAPY2(NMY1) = IXY0 + IY
 !/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 2
             END IF
           END DO
+          IF (ICLOSE.EQ.ICLOSE_TRPL) THEN
+            IY = NY
+            IF ( MAPSTA(IY,IX).EQ.1 .AND. &
+                 MAPSTA(2*NY-IY,NX-IX+1).NE.1 ) THEN
+              NMY1   = NMY1 + 1
+              MAPY2(NMY1) = IXY0 + IY
+!/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 2
+            END IF
+          END IF
         END DO
 !
 ! 2.c Range NMY1+1 to NMY2
 !
-      NMY2   = NMY1
-      DO IX=1, NX
-        IXY0   = (IX-1)*NY
-        DO IY=1, NY-1
-          IY2    = IY + 1
-          IF ( MAPSTA(IY,IX).NE.1 .AND. MAPSTA(IY2,IX).EQ.1 ) THEN
+        NMY2   = NMY1
+        DO IX=1, NX
+          IXY0   = (IX-1)*NYP
+          DO IY=1, NY-1
+            IY2    = IY + 1
+            IF ( MAPSTA(IY,IX).NE.1 .AND. MAPSTA(IY2,IX).EQ.1 ) THEN
               NMY2   = NMY2 + 1
               MAPY2(NMY2) = IXY0 + IY
 !/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 4
             END IF
-           END DO
-         END DO
+          END DO
+          IF (ICLOSE.EQ.ICLOSE_TRPL) THEN
+            IY = NY
+            IF ( MAPSTA(IY,IX).NE.1 .AND. &
+                 MAPSTA(2*NY-IY,NX-IX+1).EQ.1 ) THEN
+              NMY2   = NMY2 + 1
+              MAPY2(NMY2) = IXY0 + IY
+!/T              MAPTXY(IY,IX) = MAPTXY(IY,IX) + 4
+            END IF
+          END IF
+        END DO
 !
 !/T      WRITE (NDST,9000) 'MAPY2', NMY0, NMY1-NMY0,                     &
 !/T                         NMY2-NMY1, NMY2
@@ -329,11 +373,11 @@
 !
 ! 3.  Map MAPAXY ----------------------------------------------------- *
 !
-      NACT   = 0
-      DO IX=1, NX
-        IY0    = (IX-1)*NY
-        DO IY=2, NY-1
-          IF ( MAPSTA(IY,IX).EQ.1 ) THEN
+        NACT   = 0
+        DO IX=1, NX
+          IY0    = (IX-1)*NYP
+          DO IY=2, NY1
+            IF ( MAPSTA(IY,IX).EQ.1 ) THEN
               NACT         = NACT + 1
               MAPAXY(NACT) = IY0 + IY
             END IF
@@ -342,23 +386,27 @@
 !
 ! 4.  Map MAPCXY ----------------------------------------------------- *
 !
-      NCENT  = 0
-      NCENTC = NSEA
-      MAPCXY = 0
+        NCENT  = 0
+        NCENTC = NSEA
+        MAPCXY = 0
 !
-      DO ISEA=1,  NSEA
-        IX      = MAPSF(ISEA,1)
-        IX0    = IX-1
-        IX2    = IX+1
-        IY      = MAPSF(ISEA,2)
-        IY0    = IY-1
-        IY2    = IY+1
-        IF ( IX .EQ. NX ) IX2 = 1
-        IF ( IX .EQ. 1 ) IX0 = NX
-        IF ( MAPSTA(IY,IX).EQ.2 .OR. MAPSTA(IY,IX).LT.0 ) THEN
+        DO ISEA=1,  NSEA
+          IX      = MAPSF(ISEA,1)
+          IX0    = IX-1
+          IX2    = IX+1
+          IY      = MAPSF(ISEA,2)
+          IY0    = IY-1
+          IY2    = IY+1
+          IF ( IX .EQ. NX ) IX2 = 1
+          IF ( IX .EQ. 1 ) IX0 = NX
+          IF ( IY .EQ. NY) IY2 = 1 ! It won't be used but it needs to
+                                   !  stay in bounds of MAPSTA to avoid
+                                   !  breaking first elseif.
+          IF ( MAPSTA(IY,IX).EQ.2 .OR. MAPSTA(IY,IX).LT.0 ) THEN
             MAPCXY(NCENTC) = ISEA
             NCENTC = NCENTC - 1
-          ELSE IF ( MAPSTA(IY0,IX0).GE.1 .AND.                     &
+          ELSE IF ( IY.LT.NY             .AND.                     &
+                    MAPSTA(IY0,IX0).GE.1 .AND.                     &
                     MAPSTA(IY0,IX ).GE.1 .AND.                     &
                     MAPSTA(IY0,IX2).GE.1 .AND.                     &
                     MAPSTA(IY ,IX0).GE.1 .AND.                     &
@@ -366,6 +414,18 @@
                     MAPSTA(IY2,IX0).GE.1 .AND.                     &
                     MAPSTA(IY2,IX ).GE.1 .AND.                     &
                     MAPSTA(IY2,IX2).GE.1 ) THEN
+            NCENT  = NCENT + 1
+            MAPCXY(NCENT) = ISEA
+          ELSE IF ( IY.EQ.NY             .AND.                     &
+                    MAPSTA(IY0,IX0).GE.1 .AND.                     &
+                    MAPSTA(IY0,IX ).GE.1 .AND.                     &
+                    MAPSTA(IY0,IX2).GE.1 .AND.                     &
+                    MAPSTA(IY ,IX0).GE.1 .AND.                     &
+                    MAPSTA(IY ,IX2).GE.1 .AND.                     &
+                    !Upper points replaced w/ tripolar closure
+                    MAPSTA(IY,NX-IX0+1).GE.1 .AND.                 &
+                    MAPSTA(IY,NX-IX+1 ).GE.1 .AND.                 &
+                    MAPSTA(IY,NX-IX2+1).GE.1 ) THEN
             NCENT  = NCENT + 1
             MAPCXY(NCENT) = ISEA
           ELSE
@@ -389,13 +449,13 @@
           ISP2   = (IK+1) + (ITH-1)*(NK+2)
           MAPTH2(ISP) = ISP2
 !/T          MAPTST(IK+1,ITH) = MAPTST(IK+1,ITH) + 1
-          END DO
         END DO
+      END DO
 !
 !/T      WRITE (NDST,9000) 'MAPTH2', ISP, 0, 0, ISP
 !/T      DO IK=NK+2, 1, -1
 !/T        WRITE (NDST,9001) (MAPTST(IK,ITH),ITH=1, NTH)
-!/T        END DO
+!/T      END DO
 !
 !/T      MAPTST = 0
 !
@@ -408,27 +468,27 @@
           ISP2   = (IK+1) + (ITH-1)*(NK+2)
           MAPWN2(ISP0) = ISP2
 !/T          MAPTST(IK+1,ITH) = MAPTST(IK+1,ITH) + 1
-          END DO
         END DO
+      END DO
 !
       DO ITH=1, NTH
         ISP0   = ISP0 + 1
         ISP2   = NK+1 + (ITH-1)*(NK+2)
         MAPWN2(ISP0) = ISP2
-!/T          MAPTST(NK+1,ITH) = MAPTST(NK+1,ITH) + 2
-        END DO
+!/T        MAPTST(NK+1,ITH) = MAPTST(NK+1,ITH) + 2
+      END DO
 !
       DO ITH=1, NTH
         ISP0   = ISP0 + 1
         ISP2   = 1 + (ITH-1)*(NK+2)
         MAPWN2(ISP0) = ISP2
-!/T          MAPTST(1,ITH) = MAPTST(1,ITH) + 4
-        END DO
+!/T        MAPTST(1,ITH) = MAPTST(1,ITH) + 4
+      END DO
 !
 !/T      WRITE (NDST,9000) 'MAPWN2', NSPEC-NTH, NTH, NTH, NSPEC+NTH
 !/T      DO IK=NK+2, 1, -1
 !/T        WRITE (NDST,9001) (MAPTST(IK,ITH),ITH=1, NTH)
-!/T        END DO
+!/T      END DO
 !
       RETURN
 !
@@ -523,17 +583,17 @@
       DO ISEA=1, NSEA
         IXY         = MAPSF(ISEA,3)
 
-!notes: Oct 22 2012: I changed this because it *looks* like a bug. 
+!notes: Oct 22 2012: I changed this because it *looks* like a bug.
 !       I have not confirmed that it is a bug.
-!       Old code is given (2 lines). Only the first line is 
+!       Old code is given (2 lines). Only the first line is
 !       changed.
 
-!old    MAPTRN(IXY) = MIN( ATRNX(IXY,1) ,ATRNY(IXY,-1) ,              & 
+!old    MAPTRN(IXY) = MIN( ATRNX(IXY,1) ,ATRNY(IXY,-1) ,              &
 !old                       ATRNY(IXY,1), ATRNY(IXY,-1) ) .LT. TRNMIN
 
-        MAPTRN(IXY) = MIN( ATRNX(IXY,1) ,ATRNX(IXY,-1) ,              & 
+        MAPTRN(IXY) = MIN( ATRNX(IXY,1) ,ATRNX(IXY,-1) ,              &
                            ATRNY(IXY,1), ATRNY(IXY,-1) ) .LT. TRNMIN
-        END DO
+      END DO
 !
       RETURN
 !
@@ -574,6 +634,8 @@
 !/                  and second order schemes.           ( version 4.12 )
 !/    12-Sep-2013 : Add documentation for global clos.  ( version 4.12 )
 !/    27-May-2014 : Adding OMPH switch.                 ( version 5.02 )
+!/    02-Aug-2019 : Adding tripolar closure             ( version 7.xx )
+!/                  (B. Reichl, GFDL)
 !/
 !  1. Purpose :
 !
@@ -655,6 +717,12 @@
 !       a desirable effect. A potential future upgrade would be to add an
 !       additional term/factor that balances the effect of the spatial
 !       variation of grid resolution.
+!     - Tripolar closure implementation.  The grids are padded with 2 rows
+!       above to allow for tripolar closure externally (at the w3pro3 level)
+!       rather than within the uqck or uno2 propagation schemes.  This
+!       approach will be useful when the grid-local curvilinear grid is
+!       implemented, and the tripolar closure requires information from
+!       more than one spectral bin.
 !
 !  8. Structure :
 !
@@ -697,7 +765,7 @@
 !
       USE W3TIMEMD, ONLY: DSEC21
 !
-      USE W3GDATMD, ONLY: NX, NY, NSEA, MAPSF, DTCFL, CLATS,      &
+      USE W3GDATMD, ONLY: NX, NY, NYP, NSEA, MAPSF, DTCFL, CLATS, &
                           ICLOSE, FLCX, FLCY, NK, NTH, DTH, XFR,  &
                           ICLOSE_NONE, ICLOSE_SMPL, ICLOSE_TRPL,  &
                           ECOS, ESIN, SIG, WDCG, WDTH, PFMOVE,    &
@@ -726,10 +794,11 @@
 !/ ------------------------------------------------------------------- /
 !/ Local parameters
 !/
-      INTEGER                 :: ITH, IK, NTLOC, ITLOC, ISEA, IXY, IP
+      INTEGER                 :: ITH, IK, NTLOC, ITLOC, ISEA, IXY, &
+                                 IXY0, IXY0TP, IXYTP, IP, TP_CNV
       INTEGER                 :: IX, IY, IXC, IYC, IBI
       INTEGER                 :: IIXY1(NSEA), IIXY2(NSEA),            &
-                                 IIXY3(NSEA), IIXY4(NSEA)
+                                  IIXY3(NSEA), IIXY4(NSEA)
 !/S      INTEGER, SAVE           :: IENT = 0
       REAL                    :: CG0, CGA, CGN, CGX, CGY, CXC, CYC,   &
                                  CXMIN, CXMAX, CYMIN, CYMAX
@@ -744,27 +813,31 @@
       LOGICAL                 :: YFIRST
       LOGICAL                 :: GLOBAL
       REAL                    :: CP, CQ
+      INTEGER                 :: AP1, AP2, AP3, AP4, AP5, AP6, AP7, AP8
 !/
 !/ Automatic work arrays
 !/
-      INTEGER                 :: MAPSTX(1-2*NY:NY*(NX+2))
-      REAL                    :: VLCFLX((NX+1)*NY), VLCFLY((NX+1)*NY),&
+!     Some of these need to be done on the 'padded' array, hence
+!      the difference between NYP and NY (NYP=NY for unpadded arrays).
+      INTEGER                 :: MAPSTX(1-2*NYP:NYP*(NX+2))
+      ! These arrays don't need padded, but are passed to padded arrays
+      !  based on tripolar closure
+      REAL                    :: VLCFLX((NX+1)*NY), VLCFLY((NX+1)*NY), &
                                  AQ(1-NY:NY*(NX+2))
       REAL                    :: CXTOT((NX+1)*NY), CYTOT(NX*NY)
+      ! These are the padded arrays sent to the propagation routine
+      REAL                    :: VLCFLX_P((NX+1)*NYP),   &
+                                 VLCFLY_P((NX+1)*NYP),   &
+                                 VQ_P(1-NYP:NYP*(NX+2)), &
+                                 ATRNX_P(NX*NYP,-1:1),   &
+                                 ATRNY_P(NX*NYP,-1:1)
 !/
 !/ ------------------------------------------------------------------- /
 !/
 !/S      CALL STRACE (IENT, 'W3XYP3')
 !
 ! 1.  Preparations --------------------------------------------------- *
-
-      IF ( ICLOSE .EQ. ICLOSE_TRPL ) THEN
 !/ ------------------------------------------------------------------- /
-         IF (IAPROC .EQ. NAPERR) &
-         WRITE(NDSE,*)'SUBROUTINE W3XYP3 IS NOT YET ADAPTED FOR '//    &
-         'TRIPOLE GRIDS. STOPPING NOW.'
-         CALL EXTCDE ( 1 )
-      END IF
 
 ! 1.a Set constants
 !
@@ -782,28 +855,28 @@
 !/MGG      FGSE   = ( CGA / MAX(0.001*CGA,CGC) )**PFMOVE
 !
       IF ( FLCUR ) THEN
-          CXMIN  = MINVAL ( CX(1:NSEA) )
-          CXMAX  = MAXVAL ( CX(1:NSEA) )
-          CYMIN  = MINVAL ( CY(1:NSEA) )
-          CYMAX  = MAXVAL ( CY(1:NSEA) )
-          IF ( ABS(CGX+CXMIN) .GT. ABS(CGX+CXMAX) ) THEN
-              CGX    = CGX + CXMIN
-            ELSE
-              CGX    = CGX + CXMAX
-            END IF
-          IF ( ABS(CGY+CYMIN) .GT. ABS(CGY+CYMAX) ) THEN
-              CGY    = CGY + CYMIN
-            ELSE
-              CGY    = CGY + CYMAX
-            END IF
-          CXC    = MAX ( ABS(CXMIN) , ABS(CXMAX) )
-          CYC    = MAX ( ABS(CYMIN) , ABS(CYMAX) )
-!/MGP          CXC    = MAX ( ABS(CXMIN-VGX) , ABS(CXMAX-VGX) )
-!/MGP          CYC    = MAX ( ABS(CYMIN-VGY) , ABS(CYMAX-VGY) )
+        CXMIN  = MINVAL ( CX(1:NSEA) )
+        CXMAX  = MAXVAL ( CX(1:NSEA) )
+        CYMIN  = MINVAL ( CY(1:NSEA) )
+        CYMAX  = MAXVAL ( CY(1:NSEA) )
+        IF ( ABS(CGX+CXMIN) .GT. ABS(CGX+CXMAX) ) THEN
+          CGX    = CGX + CXMIN
         ELSE
-          CXC    = 0.
-          CYC    = 0.
+          CGX    = CGX + CXMAX
         END IF
+        IF ( ABS(CGY+CYMIN) .GT. ABS(CGY+CYMAX) ) THEN
+          CGY    = CGY + CYMIN
+        ELSE
+          CGY    = CGY + CYMAX
+        END IF
+        CXC    = MAX ( ABS(CXMIN) , ABS(CXMAX) )
+        CYC    = MAX ( ABS(CYMIN) , ABS(CYMAX) )
+!/MGP         CXC    = MAX ( ABS(CXMIN-VGX) , ABS(CXMAX-VGX) )
+!/MGP         CYC    = MAX ( ABS(CYMIN-VGY) , ABS(CYMAX-VGY) )
+      ELSE
+        CXC    = 0.
+        CYC    = 0.
+      END IF
 !
       CGN    = MAX ( ABS(CGX) , ABS(CGY) , CXC, CYC, 0.001*CG0 )
 !
@@ -821,29 +894,75 @@
 !
 !/T      WRITE (NDST,9010)
 !
-      VLCFLX = 0.
-      VLCFLY = 0.
-      CXTOT  = 0.
-      CYTOT  = 0.
+      VLCFLX(:) = 0.0
+      VLCFLY(:) = 0.0
+      CXTOT(:)  = 0.
+      CYTOT(:)  = 0.
 !
-      MAPSTX(1:NX*NY) = MAPSTA(1:NX*NY)
+! Writing status and transparancy on padded grids
 !
-      IF ( GLOBAL ) THEN
+      IF ( ICLOSE .EQ. ICLOSE_TRPL ) THEN
+        ATRNY_P(:,:) = 0.0
+        ATRNX_P(:,:) = 0.0
+        DO IX=1,NX
+          IXY0TP = (IX-1)*NYP
+          IXY0 = (IX-1)*NY
+          DO IY = 1, NY
+            IXY = IXY0 + IY
+            IXYTP = IXY0TP + IY
+            ATRNY_P(IXYTP,:) = ATRNY(IXY,:)
+            ATRNX_P(IXYTP,:) = ATRNX(IXY,:)
+            MAPSTX(IXYTP)=MAPSTA(IXY)
+          END DO
+          DO IY = NY+1,NYP
+            IXY = 2*NY-(IY-1) + (IX-1)*NY
+            IXYTP = IXY0TP + IY
+            ATRNY_P(IXYTP,:) = ATRNY(IXY,:)
+            ATRNX_P(IXYTP,:) = ATRNX(IXY,:)
+            MAPSTX(IXYTP)=MAPSTA(IXY)
+          END DO
+        END DO
+        ! Note (BGR):
+        ! Originally included MAPSTX in the above loop and used:
+        !  MAPSTX(1-2*NYP:0)             = MAPSTA((NX-2)*NYP+1:NX*NY)
+        !  MAPSTX(NX*NYP+1:NX*NYP+2*NYP) = MAPSTA(1:2*NYP)
+        ! for closure, but it made it more costly to run code
+        ! w/o tripolar closure.  So therefore doing full loop as follows
+        DO IX=-1,NX+2
+          IXY0TP = (IX-1)*NYP
+          !IXY0 = (IX-1)*NY
+          !IXY0 = ((MODULO(IX-1,NX)+1)-1)*NY < This is longitudinal closure
+          IXY0 = MODULO(IX-1,NX)*NY
+          DO IY = 1, NY
+            IXY = IXY0 + IY
+            IXYTP = IXY0TP + IY
+            MAPSTX(IXYTP)=MAPSTA(IXY)
+          END DO
+          DO IY = NY+1,NYP
+            IXY = 2*NY-(IY-1) + (MODULO(IX-1,NX))*NY
+            IXYTP = IXY0TP + IY
+            MAPSTX(IXYTP) = MAPSTA(IXY)
+          END DO
+        END DO
+      ELSE
+        MAPSTX(1:NX*NY) = MAPSTA(1:NX*NY)
+        IF ( GLOBAL ) THEN
           MAPSTX(1-2*NY:0)            = MAPSTA((NX-2)*NY+1:NX*NY)
           MAPSTX(NX*NY+1:NX*NY+2*NY)  = MAPSTA(1:2*NY)
         ELSE
           MAPSTX(1-2*NY:0)            = 0
           MAPSTX(NX*NY+1:NX*NY+2*NY)  = 0
         END IF
+      END IF
 !
 ! 1.c Pre-calculate interpolation info
 !
       FTH = FGSE * WDTH * DTH * DTLOC
       FCG = FGSE * WDCG * 0.5 * (XFR-1./XFR) * DTLOC
       IF ( FLAGLL ) THEN
-          FTH = FTH / RADIUS / DERA
-          FCG = FCG / RADIUS / DERA
-        END IF
+        FTH = FTH / RADIUS / DERA
+        FCG = FCG / RADIUS / DERA
+      END IF
       FCG = FCG / REAL(NTLOC) !TJC: required to match original (is this correct?)
       FTHX = - FTH * ESIN(ITH)
       FTHY =   FTH * ECOS(ITH)
@@ -861,7 +980,7 @@
         IX  = MAPSF(ISEA,1)
         IY  = MAPSF(ISEA,2)
 !
-! 1.c.1 Normal and parallel width ... 
+! 1.c.1 Normal and parallel width ...
 !
         TMPX   = FTHX / CLATS(ISEA)
         TMPY   = FTHY
@@ -871,6 +990,35 @@
         TMPY   = FCGY
         DXCGS  = DPDX(IY,IX)*TMPX + DPDY(IY,IX)*TMPY
         DYCGS  = DQDX(IY,IX)*TMPX + DQDY(IY,IX)*TMPY
+
+        ! Potential to shorten the time for this routine by bundling spatial terms?
+        ! e.g.
+        ! DXCGN = DPDX(IY,IX)*(FTHX)/CLATS(ISEA) + DPDY(IY,IX)*(FTHY)
+        !       = DPDX(IY,IX)*(-FTH*ESIN(ITH))/CLATS(ISEA) + DPDY(IY,IX)*(FTH*ECOS(ITH))
+        !       =   ESIN(ITH)*(DPDX(IY,IX)*-FTH/CLATS(ISEA))
+        !         + ECOS(ITH)*(DPDY(IY,IX)*FTH)
+        ! DXCGS = DPDX(IY,IX)*(FCGX)/CLATS(ISEA) + DPDY(IY,IX)*(FCGY)
+        !       = DPDX(IY,IX)*(FCG*ECOS(ITH))/CLATS(ISEA) + DPDY(IY,IX)*(FCG*ESIN(ITH))
+        !       =   ECOS(ITH)*(DPDX(IY,IX)*FCG/CLATS(ISEA))
+        !         + ESIN(ITH)*(DPDY(IY,IX)*FCG)
+        ! DYCGN = DQDX(IY,IX)*(FTHX)/CLATS(ISEA) + DQDY(IY,IX)*(FTHY)
+        !       = DQDX(IY,IX)*(-FTH*ESIN(ITH))/CLATS(ISEA) + DQDY(IY,IX)*(FTH*ECOS(ITH))
+        !       =   ESIN(ITH)*(DQDX(IY,IX)*-FTH/CLATS(ISEA))
+        !         + ECOS(ITH)*(DQDY(IY,IX)*FTH)
+        ! DYCGS = DQDX(IY,IX)*(FCGX)/CLATS(ISEA) + DQDY(IY,IX)*(FCGY)
+        !       = DQDX(IY,IX)*(FCG*ECOS(ITH))/CLATS(ISEA) + DQDY(IY,IX)*(FCG*ESIN(ITH))
+        !       =   ECOS(ITH)*(DQDX(IY,IX)*FCG/CLATS(ISEA))
+        !         + ESIN(ITH)*(DQDY(IY,IX)*FCG)
+
+        ! SPTERM1(ISEA) = (DPDX(IY,IX)*-FTH/CLATS(ISEA) + DPDY(IY,IX)*FCG)
+        ! SPTERM2(ISEA) = (DPDY(IY,IX)*FTH + DPDX(IY,IX)*FCG/CLATS(ISEA))
+        ! SPTERM3(ISEA) = (DQDX(IY,IX)*-FTH/CLATS(ISEA) + DQDY(IY,IX)*FCG)
+        ! SPTERM4(ISEA) = (DQDY(IY,IX)*FTH + DQDX(IY,IX)*FCG/CLATS(ISEA))
+
+        ! DXCGN+DXCGS =   ESIN(ITH) * SPTERM1(ISEA) + ECOS(ITH) * SPTERM2(ISEA)
+        ! DXCGN-DXCGS =   ESIN(ITH) * SPTERM1(ISEA) - ECOS(ITH) * SPTERM2(ISEA)
+        ! DYCGN+DYCGS =   ESIN(ITH) * SPTERM3(ISEA) + ECOS(ITH) * SPTERM4(ISEA)
+        ! DYCGN-DYCGS =   ESIN(ITH) * SPTERM3(ISEA) - ECOS(ITH) * SPTERM4(ISEA)
 !
 ! 1.c.2 "Sum" corner (and mirror image) ...
 !
@@ -884,18 +1032,18 @@
 !
         IIXY1(ISEA) = IXC + IYC
         IF ( ABS(DXCGC) .GT. ABS(DYCGC) ) THEN
-            IIXY2(ISEA) = IXC
-            RDI1 (ISEA) = ABS(DYCGC/DXCGC)
-            RDI2 (ISEA) = ABS(DXCGC)
+          IIXY2(ISEA) = IXC
+          RDI1 (ISEA) = ABS(DYCGC/DXCGC)
+          RDI2 (ISEA) = ABS(DXCGC)
+        ELSE
+          IIXY2(ISEA) = IYC
+          IF ( ABS(DYCGC) .GT. 1.E-5 ) THEN
+            RDI1(ISEA) = ABS(DXCGC/DYCGC)
           ELSE
-            IIXY2(ISEA) = IYC
-            IF ( ABS(DYCGC) .GT. 1.E-5 ) THEN
-                RDI1(ISEA) = ABS(DXCGC/DYCGC)
-              ELSE
-                RDI1(ISEA) = 1.
-              END IF
-            RDI2(ISEA) = ABS(DYCGC)
+            RDI1(ISEA) = 1.
           END IF
+          RDI2(ISEA) = ABS(DYCGC)
+        END IF
 !
 !/T0        WRITE (NDST,9012) ISEA, ITH, IIXY1(ISEA), IIXY2(ISEA), &
 !/T0                          RDI1(ISEA), RDI2(ISEA)*CG(IK,1)
@@ -912,23 +1060,24 @@
 !
         IIXY3(ISEA) = IXC + IYC
         IF ( ABS(DXCGC) .GT. ABS(DYCGC) ) THEN
-            IIXY4(ISEA) = IXC
-            RDI3 (ISEA) = ABS(DYCGC/DXCGC)
-            RDI4 (ISEA) = ABS(DXCGC)
+          IIXY4(ISEA) = IXC
+          RDI3 (ISEA) = ABS(DYCGC/DXCGC)
+          RDI4 (ISEA) = ABS(DXCGC)
+        ELSE
+          IIXY4(ISEA) = IYC
+          IF ( ABS(DYCGC) .GT. 1.E-5 ) THEN
+            RDI3(ISEA) = ABS(DXCGC/DYCGC)
           ELSE
-            IIXY4(ISEA) = IYC
-            IF ( ABS(DYCGC) .GT. 1.E-5 ) THEN
-                RDI3(ISEA) = ABS(DXCGC/DYCGC)
-              ELSE
-                RDI3(ISEA) = 1.
-              END IF
-            RDI4(ISEA) = ABS(DYCGC)
+            RDI3(ISEA) = 1.
           END IF
+          RDI4(ISEA) = ABS(DYCGC)
+        END IF
 !
 !/T0        WRITE (NDST,9013) IIXY3(ISEA), IIXY4(ISEA), RDI3(ISEA), &
 !/T0                          RDI4(ISEA)*CG(IK,1)
 !
-        END DO
+      END DO
+
 !
 !/OMPH/!$OMP END PARALLEL DO
 !
@@ -953,7 +1102,7 @@
 !/T1        IF ( .NOT. FLCUR )                                        &
 !/T1            WRITE (NDST,9021) ISEA, MAPSF(ISEA,1), MAPSF(ISEA,2), &
 !/T1                              VQ(IXY), CXTOT(IXY), CYTOT(IXY)
-        END DO
+      END DO
 !
 !/OMPH/!$OMP END PARALLEL DO
 !
@@ -962,35 +1111,36 @@
 !
 !/OMPH/!$OMP PARALLEL DO PRIVATE (IXY)
 !
-          DO ISEA=1, NSEA
-            IXY         = MAPSF(ISEA,3)
-            CXTOT(IXY) = CXTOT(IXY) + CX(ISEA)/CLATS(ISEA)
-            CYTOT(IXY) = CYTOT(IXY) + CY(ISEA)
+        DO ISEA=1, NSEA
+          IXY         = MAPSF(ISEA,3)
+          CXTOT(IXY) = CXTOT(IXY) + CX(ISEA)/CLATS(ISEA)
+          CYTOT(IXY) = CYTOT(IXY) + CY(ISEA)
 !/T1            WRITE (NDST,9021) ISEA, MAPSF(ISEA,1), MAPSF(ISEA,2), &
 !/T1                              VQ(IXY), CXTOT(IXY), CYTOT(IXY)
-           END DO
+        END DO
 !
 !/OMPH/!$OMP END PARALLEL DO
 !
-        END IF
+      END IF
 !
 !/OMPH/!$OMP PARALLEL DO PRIVATE (IX, IY, IXY, CP, CQ)
 !
       DO ISEA=1, NSEA
-         IX     = MAPSF(ISEA,1)
-         IY     = MAPSF(ISEA,2)
-         IXY    = MAPSF(ISEA,3)
-         CP = CXTOT(IXY)*DPDX(IY,IX) + CYTOT(IXY)*DPDY(IY,IX)
-         CQ = CXTOT(IXY)*DQDX(IY,IX) + CYTOT(IXY)*DQDY(IY,IX)
-         VLCFLX(IXY) = CP*DTRAD
-         VLCFLY(IXY) = CQ*DTRAD
+        IX     = MAPSF(ISEA,1)
+        IY     = MAPSF(ISEA,2)
+        IXY    = MAPSF(ISEA,3)
+        CP = CXTOT(IXY)*DPDX(IY,IX) + CYTOT(IXY)*DPDY(IY,IX)
+        CQ = CXTOT(IXY)*DQDX(IY,IX) + CYTOT(IXY)*DQDY(IY,IX)
+        VLCFLX(IXY) = CP*DTRAD
+        VLCFLY(IXY) = CQ*DTRAD
       END DO
+
 !
 !/OMPH/!$OMP END PARALLEL DO
 !
 ! 3.  Loop over sub-steps -------------------------------------------- *
 !
-      DO ITLOC=1, NTLOC
+      DO ITLOC = 1, NTLOC
 !
 ! 3.a Average
 !
@@ -1001,142 +1151,338 @@
 !
         DO IP=1, NCENT
           ISEA    = MAPCXY(IP)
+          IX      = MAPSF(ISEA,1)
+          IY      = MAPSF(ISEA,2)
           IXY     = MAPSF(ISEA,3)
-          IF ( MAPTRN(IXY) ) THEN
-              VQ(IXY) = AQ(IXY)
+          IF ( MAPTRN(IXY)) THEN
+            VQ(IXY) = AQ(IXY)
+          ELSE
+            IF (IY .EQ. NY) THEN
+              IF (ICLOSE.EQ.ICLOSE_TRPL) THEN
+                IXC    = SIGN(1,IIXY1(ISEA))
+                IYC    = IIXY1(ISEA) - IXC
+                IF (IYC.GT.0) THEN
+                  AP1 = (2*NY-IY) + NY*( (NX-IX+IXC+1) - 1 )
+                  AP5 = IXY - IIXY1(ISEA)
+                ELSE
+                  AP1 = IXY + IIXY1(ISEA)
+                  AP5 = (2*NY-IY) + NY*( (NX-IX+IXC+1) - 1 )
+                ENDIF
+                IXC    = SIGN(1,IIXY2(ISEA))
+                IYC    = IIXY2(ISEA) - IXC
+                IF (IYC.GT.0) THEN
+                  AP2 = (2*NY-IY) + NY*( (NX-IX+IXC+1) - 1 )
+                  AP6 = IXY - IIXY2(ISEA)
+                ELSE
+                  AP2 = IXY + IIXY2(ISEA)
+                  AP6 = (2*NY-IY) + NY*( (NX-IX+IXC+1) - 1 )
+                ENDIF
+                IXC    = SIGN(1,IIXY3(ISEA))
+                IYC    = IIXY3(ISEA) - IXC
+                IF (IYC.GT.0) THEN
+                  AP3 = (2*NY-IY) + NY*( (NX-IX+IXC+1) - 1 )
+                  AP7 = IXY - IIXY3(ISEA)
+                ELSE
+                  AP3 = IXY + IIXY3(ISEA)
+                  AP7 = (2*NY-IY) + NY*( (NX-IX+IXC+1) - 1 )
+                ENDIF
+                IXC    = SIGN(1,IIXY4(ISEA))
+                IYC    = IIXY4(ISEA) - IXC
+                IF (IYC.GT.0) THEN
+                  AP4 = (2*NY-IY) + NY*( (NX-IX+IXC+1) - 1 )
+                  AP8 = IXY - IIXY4(ISEA)
+                ELSE
+                  AP4 = IXY + IIXY4(ISEA)
+                  AP8 = (2*NY-IY) + NY*( (NX-IX+IXC+1) - 1 )
+                ENDIF
+              ELSE
+                  !IY should only equal NY for tripolar closure right now
+                !WRITE(NDSE,*)'There is an error because IY==NY, but '//&
+            !     !     ' the grid is not tripolar.'
+                !CALL EXTCDE ( 1 )
+              ENDIF
             ELSE
-              RD1     = RDI1(ISEA)
-              RD2     = MIN ( 1. , RDI2(ISEA) * CG(IK,ISEA) )
-              RD3     = RDI3(ISEA)
-              RD4     = MIN ( 1. , RDI4(ISEA) * CG(IK,ISEA) )
-              VQ(IXY          ) = VQ(IXY          )                   &
-                                   + AQ(IXY) * (3.-RD2-RD4)/3.
-              VQ(IXY+IIXY1(ISEA)) = VQ(IXY+IIXY1(ISEA))               &
-                                   + AQ(IXY) * RD2*RD1/6.
-              VQ(IXY+IIXY2(ISEA)) = VQ(IXY+IIXY2(ISEA))               &
-                                   + AQ(IXY) * (1.-RD1)*RD2/6.
-              VQ(IXY+IIXY3(ISEA)) = VQ(IXY+IIXY3(ISEA))               &
-                                   + AQ(IXY) * RD4*RD3/6.
-              VQ(IXY+IIXY4(ISEA)) = VQ(IXY+IIXY4(ISEA))               &
-                                   + AQ(IXY) * (1.-RD3)*RD4/6.
-              VQ(IXY-IIXY1(ISEA)) = VQ(IXY-IIXY1(ISEA))               &
-                                   + AQ(IXY) * RD2*RD1/6.
-              VQ(IXY-IIXY2(ISEA)) = VQ(IXY-IIXY2(ISEA))               &
-                                   + AQ(IXY) * (1.-RD1)*RD2/6.
-              VQ(IXY-IIXY3(ISEA)) = VQ(IXY-IIXY3(ISEA))               &
-                                   + AQ(IXY) * RD4*RD3/6.
-              VQ(IXY-IIXY4(ISEA)) = VQ(IXY-IIXY4(ISEA))               &
-                                   + AQ(IXY) * (1.-RD3)*RD4/6.
-            END IF
-          END DO
+              AP1 = IXY + IIXY1(ISEA)
+              AP2 = IXY + IIXY2(ISEA)
+              AP3 = IXY + IIXY3(ISEA)
+              AP4 = IXY + IIXY4(ISEA)
+              AP5 = IXY - IIXY1(ISEA)
+              AP6 = IXY - IIXY2(ISEA)
+              AP7 = IXY - IIXY3(ISEA)
+              AP8 = IXY - IIXY4(ISEA)
+            ENDIF
+
+            RD1     = RDI1(ISEA)
+            RD2     = MIN ( 1. , RDI2(ISEA) * CG(IK,ISEA) )
+            RD3     = RDI3(ISEA)
+            RD4     = MIN ( 1. , RDI4(ISEA) * CG(IK,ISEA) )
+            VQ(IXY)  = VQ(IXY)  + AQ(IXY) * (3.-RD2-RD4)/3.
+            VQ(AP1) = VQ(AP1) + AQ(IXY) * RD2*RD1/6.
+            VQ(AP2) = VQ(AP2) + AQ(IXY) * (1.-RD1)*RD2/6.
+            VQ(AP3) = VQ(AP3) + AQ(IXY) * RD4*RD3/6.
+            VQ(AP4) = VQ(AP4) + AQ(IXY) * (1.-RD3)*RD4/6.
+            VQ(AP5) = VQ(AP5) + AQ(IXY) * RD2*RD1/6.
+            VQ(AP6) = VQ(AP6) + AQ(IXY) * (1.-RD1)*RD2/6.
+            VQ(AP7) = VQ(AP7) + AQ(IXY) * RD4*RD3/6.
+            VQ(AP8) = VQ(AP8) + AQ(IXY) * (1.-RD3)*RD4/6.
+
+          END IF
+        END DO
 !
 ! 3.a.2 Near-coast points
 !
         DO IP=NCENT+1, NSEA
           ISEA    = MAPCXY(IP)
           IX      = MAPSF(ISEA,1)
+          IY      = MAPSF(ISEA,2)
           IXY     = MAPSF(ISEA,3)
           IF ( MAPSTA(IXY) .LE. 0 ) CYCLE
-          IF ( MAPTRN(IXY) ) THEN
-              VQ(IXY) = AQ(IXY)
-            ELSE          
-              RD1     = RDI1(ISEA)
-              RD3     = RDI3(ISEA)
-              RD2     = MIN ( 1. , RDI2(ISEA) * CG(IK,ISEA) )           
-              RD4     = MIN ( 1. , RDI4(ISEA) * CG(IK,ISEA) )
-              VQ(IXY          ) = VQ(IXY          )                   &
-                                   + AQ(IXY) * (3.-RD2-RD4)/3.
+          IF ( MAPTRN(IXY)) THEN
+            VQ(IXY) = AQ(IXY)
+          ELSE
+            RD1     = RDI1(ISEA)
+            RD3     = RDI3(ISEA)
+            RD2     = MIN ( 1. , RDI2(ISEA) * CG(IK,ISEA) )
+            RD4     = MIN ( 1. , RDI4(ISEA) * CG(IK,ISEA) )
 !
+            IF (IY == NY) THEN
+              ! This block of code is messy and long, but should work.
+              ! The approach taken here was to isolate changes needed
+              !  for making tripolar averaging work so that it does not
+              !  have implications for speed of non-tripolar code.
+              ! Basically, we need to find out if the top or bottom row
+              !  of the averaging footprint should be flipped across
+              !  the tripolar seam.
+              ! BGR, Aug 2019
+              IF (ICLOSE .EQ. ICLOSE_TRPL) THEN
+
+                ! Checking IIXY1, which sets AP1 and its opposite AP5
+                IXC    = SIGN(NY,IIXY1(ISEA))
+                IYC    = IIXY1(ISEA) - IXC
+                IF (IYC.LT.0) THEN
+                  IF ( MAPSTX(IXY+IIXY1(ISEA)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
+                       MAPSTX(IXY+IYC).LE.0 ) ) THEN
+                    AP1 = IXY+IIXY1(ISEA)
+                  ELSE
+                    AP1 = IXY
+                  END IF
+                  IF ( MAPSTX(2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
+                       MAPSTX(2*NY-IY+NY*((NX-IX+1)-1)).LE.0 ) ) THEN
+                    AP5 = 2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)
+                  ELSE
+                    AP5 = IXY
+                  END IF
+                ELSE
+                  IF ( MAPSTX(2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
+                       MAPSTX(2*NY-IY+NY*((NX-IX+1)-1)).LE.0 ) ) THEN
+                    AP1 = 2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)
+                  ELSE
+                    AP1 = IXY
+                  END IF
+                  IF ( MAPSTX(IXY-IIXY1(ISEA)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
+                       MAPSTX(IXY-IYC).LE.0 ) ) THEN
+                    AP5 = IXY-IIXY1(ISEA)
+                  ELSE
+                    AP5 = IXY
+                  END IF
+                END IF
+
+                ! Checking IIXY2, which sets AP2 and its opposite AP6
+                IXC    = SIGN(NY,IIXY2(ISEA))
+                IYC    = IIXY2(ISEA) - IXC
+                IF (IYC.LT.0) THEN
+                  IF ( MAPSTX(IXY+IIXY2(ISEA)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
+                       MAPSTX(IXY+IYC).LE.0 ) ) THEN
+                    AP2 = IXY+IIXY2(ISEA)
+                  ELSE
+                    AP2 = IXY
+                  END IF
+                  IF ( MAPSTX(2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
+                       MAPSTX(2*NY-IY+NY*((NX-IX+1)-1)).LE.0 ) ) THEN
+                    AP6 = 2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)
+                  ELSE
+                    AP6 = IXY
+                  END IF
+                ELSE
+                  IF ( MAPSTX(2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
+                       MAPSTX(2*NY-IY+NY*((NX-IX+1)-1)).LE.0 ) ) THEN
+                    AP2 = 2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)
+                  ELSE
+                    AP2 = IXY
+                  END IF
+                  IF ( MAPSTX(IXY-IIXY2(ISEA)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
+                       MAPSTX(IXY-IYC).LE.0 ) ) THEN
+                    AP6 = IXY-IIXY2(ISEA)
+                  ELSE
+                    AP6 = IXY
+                  END IF
+                END IF
+
+                ! Checking IIXY3, which sets AP3 and its opposite AP7
+                IXC    = SIGN(NY,IIXY3(ISEA))
+                IYC    = IIXY3(ISEA) - IXC
+                IF (IYC.LT.0) THEN
+                  IF ( MAPSTX(IXY+IIXY3(ISEA)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
+                       MAPSTX(IXY+IYC).LE.0 ) ) THEN
+                    AP3 = IXY+IIXY3(ISEA)
+                  ELSE
+                    AP3 = IXY
+                  END IF
+                  IF ( MAPSTX(2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
+                       MAPSTX(2*NY-IY+NY*((NX-IX+1)-1)).LE.0 ) ) THEN
+                    AP7 = 2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)
+                  ELSE
+                    AP7 = IXY
+                  END IF
+                ELSE
+                  IF ( MAPSTX(2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
+                       MAPSTX(2*NY-IY+NY*((NX-IX+1)-1)).LE.0 ) ) THEN
+                    AP3 = 2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)
+                  ELSE
+                    AP3 = IXY
+                  END IF
+                  IF ( MAPSTX(IXY-IIXY3(ISEA)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
+                       MAPSTX(IXY-IYC).LE.0 ) ) THEN
+                    AP7 = IXY-IIXY3(ISEA)
+                  ELSE
+                    AP7 = IXY
+                  END IF
+                END IF
+
+                ! Checking IIXY4, which sets AP4 and its opposite AP8
+                IXC    = SIGN(NY,IIXY4(ISEA))
+                IYC    = IIXY4(ISEA) - IXC
+                IF (IYC.LT.0) THEN
+                  IF ( MAPSTX(IXY+IIXY4(ISEA)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
+                       MAPSTX(IXY+IYC).LE.0 ) ) THEN
+                    AP4 = IXY+IIXY4(ISEA)
+                  ELSE
+                    AP4 = IXY
+                  END IF
+                  IF ( MAPSTX(2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
+                       MAPSTX(2*NY-IY+NY*((NX-IX+1)-1)).LE.0 ) ) THEN
+                    AP8 = 2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)
+                  ELSE
+                    AP8 = IXY
+                  END IF
+                ELSE
+                  IF ( MAPSTX(2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
+                       MAPSTX(2*NY-IY+NY*((NX-IX+1)-1)).LE.0 ) ) THEN
+                    AP4 = 2*NY-IY+NY*((NX-IX+SIGN(1,IXC)+1)-1)
+                  ELSE
+                    AP4 = IXY
+                  END IF
+                  IF ( MAPSTX(IXY-IIXY4(ISEA)) .GE. 1 .AND.               &
+                       .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
+                       MAPSTX(IXY-IYC).LE.0 ) ) THEN
+                    AP8 = IXY-IIXY4(ISEA)
+                  ELSE
+                    AP8 = IXY
+                  END IF
+                END IF
+              END IF
+            ELSE
+
+              ! This code works everywhere except on the tripolar seam
+              !  including across the simple longitudinal closure.
               IXC    = SIGN(NY,IIXY1(ISEA))
               IYC    = IIXY1(ISEA) - IXC
               IF ( MAPSTX(IXY+IIXY1(ISEA)) .GE. 1 .AND.               &
                    .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
-                           MAPSTX(IXY+IYC).LE.0 ) ) THEN
-                       VQ(IXY+IIXY1(ISEA)) = VQ(IXY+IIXY1(ISEA))      &
-                                            + AQ(IXY) * RD2*RD1/6.
-                ELSE
-                       VQ(IXY          ) = VQ(IXY          )          &
-                                            + AQ(IXY) * RD2*RD1/6.
-                END IF
+                   MAPSTX(IXY+IYC).LE.0 ) ) THEN
+                AP1 = IXY+IIXY1(ISEA)
+              ELSE
+                AP1 = IXY
+              END IF
               IF ( MAPSTX(IXY-IIXY1(ISEA)) .GE. 1 .AND.               &
                    .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
-                           MAPSTX(IXY-IYC).LE.0 ) ) THEN
-                       VQ(IXY-IIXY1(ISEA)) = VQ(IXY-IIXY1(ISEA))      &
-                                            + AQ(IXY) * RD2*RD1/6.
-                ELSE
-                       VQ(IXY          ) = VQ(IXY          )          &
-                                            + AQ(IXY) * RD2*RD1/6.
-                END IF
- 
+                   MAPSTX(IXY-IYC).LE.0 ) ) THEN
+                AP5 = IXY-IIXY1(ISEA)
+              ELSE
+                AP5 = IXY
+              END IF
               IF ( MAPSTX(IXY+IIXY2(ISEA)) .GE. 1 ) THEN
-                       VQ(IXY+IIXY2(ISEA)) = VQ(IXY+IIXY2(ISEA))      &
-                                            + AQ(IXY) * (1.-RD1)*RD2/6.
-                ELSE
-                       VQ(IXY          ) = VQ(IXY          )          &
-                                            + AQ(IXY) * (1.-RD1)*RD2/6.
-                END IF
+                AP2 = IXY+IIXY2(ISEA)
+              ELSE
+                AP2 = IXY
+              END IF
               IF ( MAPSTX(IXY-IIXY2(ISEA)) .GE. 1 ) THEN
-                       VQ(IXY-IIXY2(ISEA)) = VQ(IXY-IIXY2(ISEA))      &
-                                            + AQ(IXY) * (1.-RD1)*RD2/6.
-                ELSE
-                       VQ(IXY          ) = VQ(IXY          )          &
-                                            + AQ(IXY) * (1.-RD1)*RD2/6.
-                END IF
+                AP6 = IXY-IIXY2(ISEA)
+              ELSE
+                AP6 = IXY
+              END IF
 !
               IXC    = SIGN(NY,IIXY3(ISEA))
               IYC    = IIXY3(ISEA) - IXC
               IF ( MAPSTX(IXY+IIXY3(ISEA)) .GE. 1 .AND.               &
                    .NOT. ( MAPSTX(IXY+IXC).LE.0 .AND.                 &
-                           MAPSTX(IXY+IYC).LE.0 ) ) THEN
-                       VQ(IXY+IIXY3(ISEA)) = VQ(IXY+IIXY3(ISEA))      &
-                                            + AQ(IXY) * RD4*RD3/6.
-                ELSE
-                       VQ(IXY          ) = VQ(IXY          )          &
-                                            + AQ(IXY) * RD4*RD3/6.
-                END IF
+                   MAPSTX(IXY+IYC).LE.0 ) ) THEN
+                AP3 = IXY+IIXY3(ISEA)
+              ELSE
+                AP3 = IXY
+              END IF
               IF ( MAPSTX(IXY-IIXY3(ISEA)) .GE. 1 .AND.               &
                    .NOT. ( MAPSTX(IXY-IXC).LE.0 .AND.                 &
-                           MAPSTX(IXY-IYC).LE.0 ) ) THEN
-                       VQ(IXY-IIXY3(ISEA)) = VQ(IXY-IIXY3(ISEA))      &
-                                            + AQ(IXY) * RD4*RD3/6.
-                ELSE
-                       VQ(IXY          ) = VQ(IXY          )          &
-                                            + AQ(IXY) * RD4*RD3/6.
-                END IF
-!
+                   MAPSTX(IXY-IYC).LE.0 ) ) THEN
+                AP7 = IXY-IIXY3(ISEA)
+              ELSE
+                AP7 = IXY
+              END IF
               IF ( MAPSTX(IXY+IIXY4(ISEA)) .GE. 1 ) THEN
-                       VQ(IXY+IIXY4(ISEA)) = VQ(IXY+IIXY4(ISEA))      &
-                                            + AQ(IXY) * (1.-RD3)*RD4/6.
-                ELSE
-                       VQ(IXY          ) = VQ(IXY          )          &
-                                            + AQ(IXY) * (1.-RD3)*RD4/6.
-                END IF
+                AP4 = IXY+IIXY4(ISEA)
+              ELSE
+                AP4 = IXY
+              END IF
               IF ( MAPSTX(IXY-IIXY4(ISEA)) .GE. 1 ) THEN
-                       VQ(IXY-IIXY4(ISEA)) = VQ(IXY-IIXY4(ISEA))      &
-                                            + AQ(IXY) * (1.-RD3)*RD4/6.
-                ELSE
-                       VQ(IXY          ) = VQ(IXY          )          &
-                                            + AQ(IXY) * (1.-RD3)*RD4/6.
-                END IF
-!
+                AP8 = IXY-IIXY4(ISEA)
+              ELSE
+                AP8 = IXY
+              END IF
             END IF
+            ! Performs the 9-point average for mitigating garden
+            !  sprinkler effect
+            VQ(IXY)  = VQ(IXY)  + AQ(IXY) * (3.-RD2-RD4)/3.
+            VQ(AP1) = VQ(AP1) + AQ(IXY) * RD2*RD1/6.
+            VQ(AP2) = VQ(AP2) + AQ(IXY) * (1.-RD1)*RD2/6.
+            VQ(AP3) = VQ(AP3) + AQ(IXY) * RD4*RD3/6.
+            VQ(AP4) = VQ(AP4) + AQ(IXY) * (1.-RD3)*RD4/6.
+            VQ(AP5) = VQ(AP5) + AQ(IXY) * RD2*RD1/6.
+            VQ(AP6) = VQ(AP6) + AQ(IXY) * (1.-RD1)*RD2/6.
+            VQ(AP7) = VQ(AP7) + AQ(IXY) * RD4*RD3/6.
+            VQ(AP8) = VQ(AP8) + AQ(IXY) * (1.-RD3)*RD4/6.
+          END IF
 !
-          END DO
+        END DO
 !
 ! 3.a.3 Restore boundary data
 !
         DO IXY=1, NX*NY
           IF ( MAPSTA(IXY).EQ.2 ) VQ(IXY) = AQ(IXY)
-          END DO
+        END DO
 !
-! 3.a.4 Global closure (averaging only, propagation is closed in W3QCK3).
+! 3.a.4 Longitudinal closure (averaging only, propagation is closed in W3QCK3).
 !
         IF ( GLOBAL ) THEN
-            DO IY=1, NY
-              VQ(IY          ) = VQ(IY          ) + VQ(NX*NY+IY)
-              VQ((NX-1)*NY+IY) = VQ((NX-1)*NY+IY) + VQ(IY-NY)
-              END DO
-          END IF
+          DO IY=1, NY
+            VQ(IY          ) = VQ(IY          ) + VQ(NX*NY+IY)
+            VQ((NX-1)*NY+IY) = VQ((NX-1)*NY+IY) + VQ(IY-NY)
+          END DO
+        END IF
 !
 ! 3.b Propagate fields
 !
@@ -1149,19 +1495,49 @@
           IY     = MAPSF(ISEA,2)
           IXY    = MAPSF(ISEA,3)
           VQ(IXY)= VQ(IXY) * GSQRT(IY,IX)
+        END DO
+!
+        IF ( ICLOSE .EQ. ICLOSE_TRPL) THEN
+          VQ_P(:) =  0.0
+          VLCFLX_P(:) = 0.0
+          VLCFLY_P(:) = 0.0
+          DO IX=1,NX
+            IXY0 = (IX-1)*NY
+            IXY0tp = (IX-1)*NYP
+            TP_CNV = 2*NY + 1 + (NX -IX + 1)*NY
+            DO IY = 1, NY
+              IXY = IXY0 + IY
+              IXYtp = IXY0tp + IY
+              VQ_P(IXYtp) = VQ(IXY)
+              VLCFLX_P(IXYtp) = VLCFLX(IXY)
+              VLCFLY_P(IXYtp) = VLCFLY(IXY)
+            END DO
+            DO IY = NY+1,NYP
+              IXY = tp_cnv - IY
+              IXYtp = IXY0tp + IY
+              VQ_P(IXYtp) = VQ(IXY)
+              VLCFLX_P(IXYtp) = -VLCFLX(IXY)
+              VLCFLY_P(IXYtp) = -VLCFLY(IXY)
+            END DO
           END DO
+        END IF
 !
 !/OMPH/!$OMP END PARALLEL DO
 !
-        IF ( YFIRST ) THEN
+        ! The code would look much nicer if we always propagate a copy
+        !  of VQ_P, but it is costly to add extra the array copies to
+        !  this routine and therefore we add a tripolar toggle
+        !  and separate the code as follows.
+        IF (ICLOSE.NE.ICLOSE_TRPL) THEN
+          IF ( YFIRST ) THEN
 !
 !/UQ            IF ( FLCY ) CALL W3QCK3                               &
-!/UQ                        (NX, NY, NX, NY, VLCFLY, ATRNY, VQ,       &
+!/UQ                        (NX, NYP, NX, NYP, VLCFLY, ATRNY, VQ, &
 !/UQ                         .FALSE., 1, MAPAXY, NACT, MAPY2, NMY0,   &
 !/UQ                         NMY1, NMY2, NDSE, NDST )
 !/UQ            IF ( FLCX ) CALL W3QCK3                               &
-!/UQ                        (NX, NY, NX, NY, VLCFLX, ATRNX, VQ,       &
-!/UQ                         GLOBAL, NY, MAPAXY, NACT, MAPX2, NMX0,   &
+!/UQ                        (NX, NYP, NX, NYP, VLCFLX, ATRNX, VQ, &
+!/UQ                         GLOBAL, NYP, MAPAXY, NACT, MAPX2, NMX0,  &
 !/UQ                         NMX1, NMX2, NDSE, NDST )
 !
 !/UNO            IF ( FLCY ) CALL W3UNO2s                             &
@@ -1176,11 +1552,11 @@
           ELSE
 !
 !/UQ            IF ( FLCX ) CALL W3QCK3                               &
-!/UQ                        (NX, NY, NX, NY, VLCFLX, ATRNX, VQ,       &
-!/UQ                         GLOBAL, NY, MAPAXY, NACT, MAPX2, NMX0,   &
+!/UQ                        (NX, NYP, NX, NYP, VLCFLX, ATRNX, VQ, &
+!/UQ                         GLOBAL, NYP, MAPAXY, NACT, MAPX2, NMX0,  &
 !/UQ                         NMX1, NMX2, NDSE, NDST )
 !/UQ            IF ( FLCY ) CALL W3QCK3                               &
-!/UQ                        (NX, NY, NX, NY, VLCFLY, ATRNY, VQ,       &
+!/UQ                        (NX, NYP, NX, NYP, VLCFLY, ATRNY, VQ, &
 !/UQ                         .FALSE., 1, MAPAXY, NACT, MAPY2, NMY0,   &
 !/UQ                         NMY1, NMY2, NDSE, NDST )
 !
@@ -1194,17 +1570,71 @@
 !/UNO                         NMY1, NMY2, NDSE, NDST )
 !
           END IF
+        ELSEIF (ICLOSE .EQ. ICLOSE_TRPL) THEN
+          IF ( YFIRST ) THEN
 !
-!     Transform VQ back to normal space
+!/UQ            IF ( FLCY ) CALL W3QCK3                               &
+!/UQ                        (NX, NYP, NX, NYP, VLCFLY_P, ATRNY_P, VQ_P,&
+!/UQ                         .FALSE., 1, MAPAXY, NACT, MAPY2, NMY0,   &
+!/UQ                         NMY1, NMY2, NDSE, NDST )
+!/UQ            IF ( FLCX ) CALL W3QCK3                               &
+!/UQ                        (NX, NYP, NX, NYP, VLCFLX_P, ATRNX_P, VQ_P,&
+!/UQ                         GLOBAL, NYP, MAPAXY, NACT, MAPX2, NMX0,  &
+!/UQ                         NMX1, NMX2, NDSE, NDST )
+!
+!/UNO            IF ( FLCY ) CALL W3UNO2s                             &
+!/UNO                        (NX, NYP, NX, NYP, VLCFLY_P, ATRNY_P, VQ_P,&
+!/UNO                         .FALSE., 1, MAPAXY, NACT, MAPY2, NMY0,  &
+!/UNO                         NMY1, NMY2, NDSE, NDST )
+!/UNO            IF ( FLCX ) CALL W3UNO2s                             &
+!/UNO                        (NX, NYP, NX, NYP, VLCFLX_P, ATRNX_P, VQ_P,&
+!/UNO                         GLOBAL, NYP, MAPAXY, NACT, MAPX2, NMX0,  &
+!/UNO                         NMX1, NMX2, NDSE, NDST )
+!
+          ELSE
+!
+!/UQ            IF ( FLCX ) CALL W3QCK3                               &
+!/UQ                        (NX, NYP, NX, NYP, VLCFLX_P, ATRNX_P, VQ_P,&
+!/UQ                         GLOBAL, NYP, MAPAXY, NACT, MAPX2, NMX0,  &
+!/UQ                         NMX1, NMX2, NDSE, NDST )
+!/UQ            IF ( FLCY ) CALL W3QCK3                               &
+!/UQ                        (NX, NYP, NX, NYP, VLCFLY_P, ATRNY_P, VQ_P,&
+!/UQ                         .FALSE., 1, MAPAXY, NACT, MAPY2, NMY0,   &
+!/UQ                         NMY1, NMY2, NDSE, NDST )
+!
+!/UNO            IF ( FLCX ) CALL W3UNO2s                             &
+!/UNO                        (NX, NYP, NX, NYP, VLCFLX_P, ATRNX_P, VQ_P,&
+!/UNO                         GLOBAL, NYP, MAPAXY, NACT, MAPX2, NMX0,  &
+!/UNO                         NMX1, NMX2, NDSE, NDST )
+!/UNO            IF ( FLCY ) CALL W3UNO2s                             &
+!/UNO                        (NX, NYP, NX, NYP, VLCFLY_P, ATRNY_P, VQ_P,&
+!/UNO                         .FALSE., 1, MAPAXY, NACT, MAPY2, NMY0,  &
+!/UNO                         NMY1, NMY2, NDSE, NDST )
+!
+          END IF
+        END IF
 !
 !/OMPH/!$OMP PARALLEL DO PRIVATE (ISEA, IX, IY, IXY)
 !
+!    Copy from the padded array back to the regular array
+!     after propagation has been performed
+        IF ( ICLOSE .EQ. ICLOSE_TRPL) THEN
+          DO ISEA = 1, NSEA
+            IX = MAPSF(ISEA,1)
+            IY = MAPSF(ISEA,2)
+            IXY = MAPSF(ISEA,3)
+            IXYtp = IY + (IX-1)*NYP
+            VQ(IXY) = VQ_P(IXYtp)
+          END DO
+        END IF
+!
+!     Transform VQ back to normal space
         DO ISEA=1, NSEA
           IX     = MAPSF(ISEA,1)
           IY     = MAPSF(ISEA,2)
           IXY    = MAPSF(ISEA,3)
           VQ(IXY)= VQ(IXY) / GSQRT(IY,IX)
-          END DO
+        END DO
 !
 !/OMPH/!$OMP END PARALLEL DO
 !
@@ -1220,26 +1650,26 @@
 !/T2              END IF
 !/T2            END DO
 !
-        IF ( FLBPI ) THEN 
-            RD1    = DSEC21 ( TBPI0, TIME ) - DTG *                   &
-                                      REAL(NTLOC-ITLOC)/REAL(NTLOC)
-            RD2    = DSEC21 ( TBPI0, TBPIN )
-            IF ( RD2 .GT. 0.001 ) THEN
-                 RD2    = MIN(1.,MAX(0.,RD1/RD2))
-                 RD1    = 1. - RD2
-              ELSE
-                 RD1    = 0.
-                 RD2    = 1.
-              END IF
-            DO IBI=1, NBI
-              IXY     = MAPSF(ISBPI(IBI),3)
-              VQ(IXY) = ( RD1*BBPI0(ISP,IBI) + RD2*BBPIN(ISP,IBI) )   &
-                          / CG(IK,ISBPI(IBI)) * CLATS(ISBPI(IBI))
-              END DO
+        IF ( FLBPI ) THEN
+          RD1    = DSEC21 ( TBPI0, TIME ) - DTG *                   &
+               REAL(NTLOC-ITLOC)/REAL(NTLOC)
+          RD2    = DSEC21 ( TBPI0, TBPIN )
+          IF ( RD2 .GT. 0.001 ) THEN
+            RD2    = MIN(1.,MAX(0.,RD1/RD2))
+            RD1    = 1. - RD2
+          ELSE
+            RD1    = 0.
+            RD2    = 1.
           END IF
+          DO IBI=1, NBI
+            IXY     = MAPSF(ISBPI(IBI),3)
+            VQ(IXY) = ( RD1*BBPI0(ISP,IBI) + RD2*BBPIN(ISP,IBI) )   &
+                 / CG(IK,ISBPI(IBI)) * CLATS(ISBPI(IBI))
+          END DO
+        END IF
 !
         YFIRST = .NOT. YFIRST
-        END DO
+      END DO
 !
 ! 4.  Store results in VQ in proper format --------------------------- *
 !
@@ -1253,9 +1683,9 @@
         IXY    = MAPSF(ISEA,3)
         IF ( MAPSTA(IXY) .GT. 0 ) THEN
 !/T3            WRITE (NDST,9041) ISEA, MAPSF(ISEA,1), MAPSF(ISEA,2), VQ(IXY)
-            VQ(IXY) =  MAX ( 0. , CG(IK,ISEA)/CLATS(ISEA)*VQ(IXY) )
-          END IF
-        END DO
+          VQ(IXY) =  MAX ( 0. , CG(IK,ISEA)/CLATS(ISEA)*VQ(IXY) )
+        END IF
+      END DO
 !
 !/OMPH/!$OMP END PARALLEL DO
 !
@@ -1444,7 +1874,7 @@
 ! 1.  Preparations --------------------------------------------------- *
 ! 1.a Initialize arrays
 !
-     DEPTH  = MAX ( DMIN, DW )  
+     DEPTH  = MAX ( DMIN, DW )
      VQ       = 0.
      IF ( FLCTH ) VCFLT    = 0.
      IF ( FLCK  ) CFLK     = 0.
@@ -1548,7 +1978,7 @@
             CFLTHMAX = MAX(CFLTHMAX, ABS(VELNOFILT))
 !
 ! Puts filtering on total velocity (including currents and great circle effects)
-! the filtering limits VCFLT to be less than CTMAX 
+! the filtering limits VCFLT to be less than CTMAX
 ! this modification was proposed by F. Ardhuin 2011/03/06
 !
             VCFLT(MAPTH2(ISP))=SIGN(MIN(ABS(VELNOFILT),CTMAX),VELNOFILT)
@@ -1593,15 +2023,15 @@
 !
           DO IK=0, NK+1
             FKD0   = FKD / CG(IK) * DSDD(IK)
-            VELFAC =  FACK/DB(IK+1,1) 
+            VELFAC =  FACK/DB(IK+1,1)
             DO ITH=1, NTH
 !
-! Puts filtering on velocity (needs the band widths) 
-!             
-              VELNOFILT = ( FKD0 + WN(IK)*FKC(ITH) ) * VELFAC   ! this is velocity * DT / DK 
+! Puts filtering on velocity (needs the band widths)
+!
+              VELNOFILT = ( FKD0 + WN(IK)*FKC(ITH) ) * VELFAC   ! this is velocity * DT / DK
               CFLKMAX = MAX(CFLKMAX, ABS(VELNOFILT))
               CFLK(IK+1,ITH) = SIGN(MIN(ABS(VELNOFILT),CTMAX),VELNOFILT)/VELFAC
-              !CFLK(IK+1,ITH) = FKD0 + WN(IK)*FKC(ITH)          ! this was without the limiter ... 
+              !CFLK(IK+1,ITH) = FKD0 + WN(IK)*FKC(ITH)          ! this was without the limiter ...
               END DO
             END DO
 !
