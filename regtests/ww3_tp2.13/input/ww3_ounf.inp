@@ -14,7 +14,7 @@ $
   DPT HS
 $
 $--------------------------------------------------------------------- $
-$ Output type 4 [3,4] (version netCDF)   
+$ Output type 4 [3,4] (version netCDF)
 $        and   variable type 4 [2 = SHORT, 3 = it depends , 4 = REAL]
 $ Output type 0 1 2 [0,1,2,3,4,5]   (swell partition)
 $ variables T [T] or not [F] in the same file
@@ -28,9 +28,9 @@ $ File prefix
 $ number of characters in date
 $ IX, IY range
 $
- ww3.         
+ ww3.
  6
- 1 999 1 999 
+ 1 9999 1 9999
 $
 $ For each field and time a new file is generated with the file name
 $ ww3.date_xxx.nc , where date is a conventional time idicator with S3
