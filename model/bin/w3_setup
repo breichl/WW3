@@ -199,8 +199,8 @@ else
   else
     prntr=printer
   fi
-  comp_fc=gfortran
-  comp_cc=gcc
+  comp_fc=ifort
+  comp_cc=icc
   if [ $tdir ]
   then
     temp_dir=$tdir
