@@ -135,7 +135,9 @@
 
 # GRID STRT BOUND OUTF OUTP TRCK GRIB GINT GX* UPRSTR LIBWW3
 #  reg_programs = non-NetCDF programs
-  reg_programs="$ww3_bound"
+  reg_programs="ww3_grid"
+  reg_programs="$reg_programs ww3_strt"
+  reg_programs="$reg_programs ww3_bound"
   reg_programs="$reg_programs ww3_outf"
   reg_programs="$reg_programs ww3_outp"
   reg_programs="$reg_programs ww3_trck"
@@ -152,13 +154,6 @@
   cdf_programs="$cdf_programs ww3_ounp"
   cdf_programs="$cdf_programs ww3_bounc"
   cdf_programs="$cdf_programs ww3_trnc"
-
-  if [ -n "`grep GLOC $switch_file`" ]
-  then
-    cdf_programs="ww3_grid ww3_strt $cdf_programs"
-  else
-    reg_programs="ww3_grid ww3_strt $reg_programs"
-  fi
 
   # PRTIDE
   if [ -n "`grep TIDE $switch_file`" ]
@@ -209,7 +204,7 @@
   fi
 
   # SHEL PREP GSPL
-  if [ -n "`grep OASIS $switch_file`" ] || [ -n "`grep PDLIB $switch_file`" ] || [ -n "`grep GLOC $switch_file`" ]
+  if [ -n "`grep OASIS $switch_file`" ] || [ -n "`grep PDLIB $switch_file`" ]
   then
     cdf_programs="$cdf_programs ww3_gspl"
     cdf_programs="$cdf_programs ww3_prep"
@@ -218,7 +213,7 @@
     reg_programs="$reg_programs ww3_prep"
   fi
 
-  if [ -n "`grep OASIS $switch_file`" ]  || [ -n "`grep PDLIB $switch_file`" ] || [ -n "`grep GLOC $switch_file`" ]
+  if [ -n "`grep OASIS $switch_file`" ]  || [ -n "`grep PDLIB $switch_file`" ]
   then
     cdf_programs="$cdf_programs ww3_shel"
   else
@@ -230,6 +225,13 @@
     reg_programs="$reg_programs libww3.so"
   else
     echo 'Shared Object     : No'
+  fi
+
+  #For GLOC we require NetCDF for everything (for reading metrics)
+  if [ -n "`grep GLOC $switch_file`" ]
+  then
+    cdf_programs="$cdf_programs $reg_programs"
+    reg_programs=""
   fi
 
   # if no progs in argument

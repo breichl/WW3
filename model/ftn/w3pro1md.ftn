@@ -255,7 +255,7 @@
 !/
       END SUBROUTINE W3MAP1
 !/ ------------------------------------------------------------------- /
-      SUBROUTINE W3XYP1 ( ISP, DTG, MAPSTA, FIELD, VGX, VGY FIELD_180 )
+      SUBROUTINE W3XYP1 ( ISP, DTG, MAPSTA, FIELD, VGX, VGY, FIELD_180 )
 !/
 !/                  +-----------------------------------+
 !/                  | WAVEWATCH III           NOAA/NCEP |
@@ -446,7 +446,7 @@
 
 !/GLOC      IF ( ICLOSE .EQ. ICLOSE_TRPL ) THEN
 !/GLOC         IF ( .NOT.PRESENT(FIELD_180) ) THEN
-!/GLOC            EXTCDE(999,MSG='W3XYP1 needs rotated field for '//   &
+!/GLOC            CALL EXTCDE(999,MSG='W3XYP1 needs rotated field for '//   &
 !/GLOC                         'grid-local tripolar closure. This '//  &
 !/GLOC                         'requirement is broken.')
 !/GLOC         ENDIF
@@ -523,7 +523,7 @@
           CONVERT_TO_SPHERICAL = CLATS(ISEA)
 !/GLOC          CONVERT_TO_SPHERICAL = 1.0
           IF (CONVERT_TO_SPHERICAL<1.e-8) THEN
-            EXTCDE(999,MSG='There is an open North Pole '// &
+            CALL EXTCDE(999,MSG='There is an open North Pole '// &
                            'without grid-local directions in '//&
                            'w3pro1, use GLOC or remove '//&
                            'the pole.')
@@ -914,6 +914,7 @@
       USE W3ADATMD, ONLY: IS0, IS2
       USE W3IDATMD, ONLY: FLCUR
       USE W3ODATMD, ONLY: NDST
+      USE W3SERVMD, ONLY: EXTCDE
 !/DEBUG      USE W3ODATMD, only : IAPROC
 !/S      USE W3SERVMD, ONLY: STRACE
 !/
@@ -960,7 +961,7 @@
 !/GLOC                    PRESENT(DPDX) .AND. PRESENT(DPDY) .AND. &
 !/GLOC                    PRESENT(DQDX) .AND. PRESENT(DQDY) .AND. &
 !/GLOC                    PRESENT(GANGL) ) ) THEN
-!/GLOC            EXTCDE(999,MSG='W3KTP1 needs missing fields for '// &
+!/GLOC            CALL EXTCDE(999,MSG='W3KTP1 needs missing fields for '// &
 !/GLOC                 'grid-local closure (great-circle refraction).')
 !/GLOC         ENDIF
 ! 1.  Preparations --------------------------------------------------- *
