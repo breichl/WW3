@@ -53,7 +53,7 @@
   fi
 
 
-# 1.c Get data from setup file - - - - - - - - - - - - - - - - - - - - - - - - 
+# 1.c Get data from setup file - - - - - - - - - - - - - - - - - - - - - - - -
 
   source $(dirname $0)/w3_setenv
   main_dir=$WWATCH3_DIR
@@ -135,9 +135,7 @@
 
 # GRID STRT BOUND OUTF OUTP TRCK GRIB GINT GX* UPRSTR LIBWW3
 #  reg_programs = non-NetCDF programs
-  reg_programs="ww3_grid" 
-  reg_programs="$reg_programs ww3_strt"
-  reg_programs="$reg_programs ww3_bound"
+  reg_programs="$ww3_bound"
   reg_programs="$reg_programs ww3_outf"
   reg_programs="$reg_programs ww3_outp"
   reg_programs="$reg_programs ww3_trck"
@@ -145,7 +143,7 @@
   reg_programs="$reg_programs ww3_gint"
   reg_programs="$reg_programs gx_outf"
   reg_programs="$reg_programs gx_outp"
-  reg_programs="$reg_programs ww3_uprstr" 
+  reg_programs="$reg_programs ww3_uprstr"
 
 # PRNC OUNF OUNP BOUNC TRNC
 # cdf_programs = NetCDF programs
@@ -154,6 +152,13 @@
   cdf_programs="$cdf_programs ww3_ounp"
   cdf_programs="$cdf_programs ww3_bounc"
   cdf_programs="$cdf_programs ww3_trnc"
+
+  if [ -n "`grep GLOC $switch_file`" ]
+  then
+    cdf_programs="ww3_grid ww3_strt $cdf_programs"
+  else
+    reg_programs="ww3_grid ww3_strt $reg_programs"
+  fi
 
   # PRTIDE
   if [ -n "`grep TIDE $switch_file`" ]
@@ -204,7 +209,7 @@
   fi
 
   # SHEL PREP GSPL
-  if [ -n "`grep OASIS $switch_file`" ] || [ -n "`grep PDLIB $switch_file`" ]
+  if [ -n "`grep OASIS $switch_file`" ] || [ -n "`grep PDLIB $switch_file`" ] || [ -n "`grep GLOC $switch_file`" ]
   then
     cdf_programs="$cdf_programs ww3_gspl"
     cdf_programs="$cdf_programs ww3_prep"
@@ -213,7 +218,7 @@
     reg_programs="$reg_programs ww3_prep"
   fi
 
-  if [ -n "`grep OASIS $switch_file`" ]  || [ -n "`grep PDLIB $switch_file`" ]
+  if [ -n "`grep OASIS $switch_file`" ]  || [ -n "`grep PDLIB $switch_file`" ] || [ -n "`grep GLOC $switch_file`" ]
   then
     cdf_programs="$cdf_programs ww3_shel"
   else
@@ -243,7 +248,7 @@
 
 # 1.f sort sequential and parallel programs - - - - - - - - - - - - - - - - - -
 
-  # no filtering is done to distinguish sequential to parallel programs 
+  # no filtering is done to distinguish sequential to parallel programs
   # see w3_automake for this feature
   progs=$all_programs
 
@@ -293,7 +298,7 @@
 
 
 
-# 1.c Setup for NetCDF compile - - - - - - - - - - - - - - - - - - - - - - - - 
+# 1.c Setup for NetCDF compile - - - - - - - - - - - - - - - - - - - - - - - -
 
 # 1.c.1 NetCDF compile message function
 
@@ -443,11 +448,11 @@ EOF
     then
       echo "NetCDF enabled programs ($cdf_programs)"
       echo "will not be compiled unless NetCDF compile environment is properly set."; echo ' '
-      if [ $systrck_nc4notrknc -eq 1 ] 
-      then 
+      if [ $systrck_nc4notrknc -eq 1 ]
+      then
          echo "WARNING: ww3_systrk will not be compiled due to invalid switch option."; echo ' '
          echo "TRKNC switch is also required with NC4."; echo ' '
-      fi 
+      fi
       echo "Continuing with compile of non-NetCDF programs ..."; echo ' '
       progs="$reg_programs"
     fi
@@ -474,7 +479,7 @@ EOF
     for prog in $systrkprog
     do
       if [ -n "`echo $progs | grep $prog`" ]
-      then   
+      then
         if [ $systrck_nc4notrknc -eq 1 ]
         then
           echo "ERROR: ww3_systrk will not be compiled due to invalid switch option."; echo ' '
@@ -486,7 +491,7 @@ EOF
     done
   fi
 
-# 1.d Prepare scratch directory  - - - - - - - - - - - - - - - - - - - - - - - 
+# 1.d Prepare scratch directory  - - - - - - - - - - - - - - - - - - - - - - -
 
   if test ! -d $temp_dir
   then
@@ -551,7 +556,7 @@ EOF
   fi
   echo ' '
 
-# 1.f Export paths - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# 1.f Export paths - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   aPb="$main_dir/bin"     # path containing shell scripts
   aPo="$main_dir/obj"     # path containing .o files
@@ -570,7 +575,7 @@ EOF
     echo "Processing $prog"
     echo "---------------------"
 
-# 2.b Check input  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# 2.b Check input  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     OK='n'
     for check in $all_programs
@@ -586,7 +591,7 @@ EOF
       echo ' '
       exit 1
 
-# 2.c Run make - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# 2.c Run make - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     else
 
@@ -612,14 +617,14 @@ EOF
       export omp_mod
 
       oasis_mod=no
-      if [ -n "`grep OASIS $switch_file`" ] 
+      if [ -n "`grep OASIS $switch_file`" ]
       then
         export oasis_mod='yes'
       fi
       export oasis_mod
 
       pdlib_mod=no
-      esmfpdlib='' 
+      esmfpdlib=''
       if [ -n "`grep PDLIB $switch_file`" ]
       then
         export pdlib_mod='yes'
@@ -634,7 +639,7 @@ EOF
       # processed to get required ESMF compile options
       if [ -n "`echo $prog | grep esmf 2>/dev/null`" ]
       then
-        if [ -z "`grep DIST $switch_file`" ] 
+        if [ -z "`grep DIST $switch_file`" ]
         then
           echo ' '
           echo "*** DIST switch must be set when compiling with ESMF ***"
@@ -713,10 +718,10 @@ EOF
         then
           mod_dir=$main_dir/mod_HYB
           obj_dir=$main_dir/obj_HYB
-        else 
+        else
           mod_dir=$main_dir/mod_MPI
           obj_dir=$main_dir/obj_MPI
-        fi 
+        fi
         rm -f $mkfile
         touch $mkfile
         echo "#-----------------------------------------------"      >> $mkfile
@@ -737,11 +742,11 @@ EOF
 
   done
 
-# 2.d copy comp and link 
+# 2.d copy comp and link
 
   cp  $main_dir/bin/comp $main_dir/exe/
   cp  $main_dir/bin/link $main_dir/exe/
- 
+
 # --------------------------------------------------------------------------- #
 # 3. End of program ID.                                                       #
 # --------------------------------------------------------------------------- #

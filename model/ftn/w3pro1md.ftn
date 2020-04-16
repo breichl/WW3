@@ -33,7 +33,7 @@
 !/
 !/    Copyright 2009-2014 National Weather Service (NWS),
 !/       National Oceanic and Atmospheric Administration.  All rights
-!/       reserved.  WAVEWATCH III is a trademark of the NWS. 
+!/       reserved.  WAVEWATCH III is a trademark of the NWS.
 !/       No unauthorized use without permission.
 !/
 !  1. Purpose :
@@ -118,7 +118,7 @@
 !  5. Called by :
 !
 !      Name      Type  Module   Description
-!     ---------------------------------------------------------------- 
+!     ----------------------------------------------------------------
 !      W3WAVE    Subr. W3WAVEMD Wave model routine.
 !     ----------------------------------------------------------------
 !
@@ -255,7 +255,7 @@
 !/
       END SUBROUTINE W3MAP1
 !/ ------------------------------------------------------------------- /
-      SUBROUTINE W3XYP1 ( ISP, DTG, MAPSTA, FIELD, VGX, VGY )
+      SUBROUTINE W3XYP1 ( ISP, DTG, MAPSTA, FIELD, VGX, VGY FIELD_180 )
 !/
 !/                  +-----------------------------------+
 !/                  | WAVEWATCH III           NOAA/NCEP |
@@ -300,6 +300,9 @@
 !       FIELD   R.A.  I/O  Wave action spectral densities on full
 !                          grid.
 !       VGX/Y   Real   I   Speed of grid.
+!       FIELD_180 R.A.   I*  Wave action spectral densities on full
+!                            grid for 180 degree spectral location.
+!       * - Optional
 !     ----------------------------------------------------------------
 !
 !     Local variables.
@@ -321,7 +324,7 @@
 !  5. Called by :
 !
 !      Name      Type  Module   Description
-!     ---------------------------------------------------------------- 
+!     ----------------------------------------------------------------
 !      W3WAVE    Subr. W3WAVEMD Wave model routine.
 !     ----------------------------------------------------------------
 !
@@ -345,13 +348,13 @@
 !       This is to calculate the flux VCY(IY+0.5). For the tripole grid,
 !       we cannot do it this way, since the sign of VCY flips as we jump
 !       over the seam. If we were to do it this way, VCY(IY) and VCY(IY+1)
-!       are two numbers of similar magnitude and opposite sign, so the 
-!       average of the two gives something close to zero, so energy does 
+!       are two numbers of similar magnitude and opposite sign, so the
+!       average of the two gives something close to zero, so energy does
 !       not leave via VCY(IY+0.5). One alternative is:
-!               VCB       = VCY2D(IY,IX) 
+!               VCB       = VCY2D(IY,IX)
 !       Another alternative is :
 !               VCB       = FACVY(IXY) * ( VCY2D(IY,IX) - VCY2D(IY+1,IX) )
-!       Both appear to give correct results for ww3_tp2.13. We use the 
+!       Both appear to give correct results for ww3_tp2.13. We use the
 !       second alternative.
 !
 !  8. Structure :
@@ -406,6 +409,7 @@
       INTEGER, INTENT(IN)     :: ISP, MAPSTA(NY*NX)
       REAL, INTENT(IN)        :: DTG, VGX, VGY
       REAL, INTENT(INOUT)     :: FIELD(1-NY:NY*(NX+2))
+      REAL, OPTIONAL, INTENT(IN) :: FIELD_180(1-NY:NY*(NX+2))
 !/
 !/ ------------------------------------------------------------------ /
 !/ Local parameters
@@ -419,6 +423,7 @@
       REAL                    :: DTLOC,DTRAD, VCB
       REAL                    :: RD1, RD2
       REAL                    :: CP, CQ
+      REAL                    :: CONVERT_TO_SPHERICAL
 !/T3      REAL                    :: AOLD
 !/
 !/ Automatic work arrays
@@ -426,6 +431,7 @@
       REAL                    :: CXTOT2D(NY,NX)
       REAL                    :: CYTOT2D(NY,NX)
       REAL                    :: FLD2D(NY+1,NX+1)
+!/GLOC      REAL                    :: FLD2D_180(NY+1,NX+1)
       REAL                    :: VCX2D(NY,NX+1)
       REAL                    :: VCY2D(NY+1,NX)
       REAL                    :: VFLX2D(1:NY,0:NX)
@@ -437,6 +443,14 @@
 !/S      CALL STRACE (IENT, 'W3XYP1')
 !
 ! 1.  Preparations --------------------------------------------------- *
+
+!/GLOC      IF ( ICLOSE .EQ. ICLOSE_TRPL ) THEN
+!/GLOC         IF ( .NOT.PRESENT(FIELD_180) ) THEN
+!/GLOC            EXTCDE(999,MSG='W3XYP1 needs rotated field for '//   &
+!/GLOC                         'grid-local tripolar closure. This '//  &
+!/GLOC                         'requirement is broken.')
+!/GLOC         ENDIF
+!/GLOC      ENDIF
 
 ! 1.a Set constants
 !
@@ -464,7 +478,11 @@
       NTLOC  = 1 + INT(DTG/(DTCFL*CG0/CGN))
       DTLOC  = DTG / REAL(NTLOC)
       DTRAD  = DTLOC
-      IF ( FLAGLL ) DTRAD=DTRAD/(DERA*RADIUS)
+!/GLOC      ! When grid-local we don't convert the spectral energy
+!/GLOC      ! and thus want to skip the following.
+!/GLOC      IF (.FALSE.) THEN
+      IF ( FLAGLL) DTRAD=DTRAD/(DERA*RADIUS)
+!/GLOC      ENDIF
 
 !
 !/T      WRITE (NDST,9000) NTLOC
@@ -478,13 +496,14 @@
 !
 !/T1      WRITE (NDST,9010) ITLOC
 !
-        VCX2D = 0.
-        VCY2D = 0.
-        CXTOT2D  = 0.
-        CYTOT2D  = 0.
-        FLD2D  = 0.
-        VFLX2D  = 0.
-        VFLY2D  = 0.
+        VCX2D(:,:)   = 0.
+        VCY2D(:,:)   = 0.
+        CXTOT2D(:,:) = 0.
+        CYTOT2D(:,:) = 0.
+        FLD2D(:,:)   = 0.
+        VFLX2D(:,:)  = 0.
+        VFLY2D(:,:)  = 0.
+!/GLOC        FLD2D_180(:,:) = 0.
 !
 ! 2.  Calculate field and velocities --------------------------------- *
 !
@@ -501,11 +520,22 @@
           IY     = MAPSF(ISEA,2)
           IXY    = MAPSF(ISEA,3)
 
-          FLD2D(IY,IX) = FIELD(IXY) / CG(IK,ISEA) * CLATS(ISEA)
+          CONVERT_TO_SPHERICAL = CLATS(ISEA)
+!/GLOC          CONVERT_TO_SPHERICAL = 1.0
+          IF (CONVERT_TO_SPHERICAL<1.e-8) THEN
+            EXTCDE(999,MSG='There is an open North Pole '// &
+                           'without grid-local directions in '//&
+                           'w3pro1, use GLOC or remove '//&
+                           'the pole.')
+          ENDIF
 
-          CXTOT2D(IY,IX) = ECOS(ITH) * CG(IK,ISEA) / CLATS(ISEA)
+          FLD2D(IY,IX) = FIELD(IXY) / CG(IK,ISEA) &
+                         * CONVERT_TO_SPHERICAL
+!/GLOC             FLD2D_180(IY,IX) = FIELD_180(IXY) / CG(IK,ISEA)
+          CXTOT2D(IY,IX) = ECOS(ITH) * CG(IK,ISEA) &
+                           / CONVERT_TO_SPHERICAL
           CYTOT2D(IY,IX) = ESIN(ITH) * CG(IK,ISEA)
-!/MGP          CXTOT2D(IY,IX) = CXTOT2D(IY,IX) - VGX/CLATS(ISEA)
+!/MGP          CXTOT2D(IY,IX) = CXTOT2D(IY,IX) - VGX/CONVERT_TO_SPHERICAL
 !/MGP          CYTOT2D(IY,IX) = CYTOT2D(IY,IX) - VGY
 
 !/T1          WRITE (NDST,9021) ISEA, IXY, FLD2D(IY,IX), &
@@ -518,13 +548,14 @@
             DO ISEA=1, NSEA
               IX     = MAPSF(ISEA,1)
               IY     = MAPSF(ISEA,2)
-
-              CXTOT2D(IY,IX) = CXTOT2D(IY,IX) + CX(ISEA)/CLATS(ISEA)
+              CONVERT_TO_SPHERICAL = CLATS(ISEA)
+!/GLOC              CONVERT_TO_SPHERICAL = 1.0
+              CXTOT2D(IY,IX) = CXTOT2D(IY,IX) + CX(ISEA)/CONVERT_TO_SPHERICAL
               CYTOT2D(IY,IX) = CYTOT2D(IY,IX) + CY(ISEA)
 
             END DO
         END IF
-          
+
         IF ( FLCX ) THEN
            DO ISEA=1, NSEA
               IX     = MAPSF(ISEA,1)
@@ -552,7 +583,8 @@
 !   row will be in index space (bug applied only to global, irregular
 !   grids, so it did not apply to any test case that existed w/v4.18)
         FLD2D(1:NY,1:NX)=FLD2D(1:NY,1:NX)*GSQRT(1:NY,1:NX)
-
+!/GLOC        FLD2D_180(1:NY,1:NX) = FLD2D_180(1:NY,1:NX) *&
+!/GLOC                               GSQRT(1:NY,1:NX)
 !
 ! Deal with longitude closure by duplicating one row *to the right*
 !   in FIELD/FLD2D, VCX
@@ -562,6 +594,7 @@
 !/NEC/!CDIR NODEP
             DO IY=1, NY
               FLD2D(IY,NX+1)=FLD2D(IY,1)
+!/GLOC              FLD2D_180(IY,NX+1) = FLD2D_180(IY,1)
               VCX2D(IY,NX+1)=VCX2D(IY,1)
 !/T1              WRITE (NDST,9025) IY, FLD2D(IY,NX+1), VCX2D(IY,NX+1)
             END DO
@@ -572,7 +605,11 @@
         IF ( ICLOSE.EQ.ICLOSE_TRPL ) THEN
             DO IX=1,NX
 !...........next point: j+1: tripole: j==>j+1==>j and i==>ni-i+1
+!/GLOC        IF (.FALSE.) THEN  !Grid-local we want the 180 rotated
               FLD2D(NY+1,IX)=FLD2D(NY,NX-IX+1)
+!/GLOC        ELSE
+!/GLOC        FLD2D(NY+1,IX)=FLD2D_180(NY,NX-IX+1)
+!/GLOC        ENDIF
               VCY2D(NY+1,IX)=VCY2D(NY,NX-IX+1)
             END DO
         END IF
@@ -631,7 +668,11 @@
 !
            DO IX=1, NX
               IXY    = IY +(IX-1)*NY
+!/GLOC        IF (.FALSE.) THEN ! For grid-local we don't need the special case
               VCB       = FACVY(IXY) * ( VCY2D(IY,IX) - VCY2D(IY+1,IX) )
+!/GLOC        ELSE
+!/GLOC        VCB       = FACVY(IXY) * ( VCY2D(IY,IX) + VCY2D(IY+1,IX) )
+!/GLOC        ENDIF
               VFLY2D(IY,IX) = MAX ( VCB , 0. ) * FLD2D(IY,IX)          &
                             + MIN ( VCB , 0. ) * FLD2D(IY+1,IX)
            END DO
@@ -683,7 +724,7 @@
                                  + ATRNX(IXY,JXN) * VFLX2D(IY,IX-1)   &
                                  - ATRNX(IXY,JXP) * VFLX2D(IY,IX)     &
                                  + ATRNY(IXY,JYN) * VFLY2D(IY-1,IX)   &
-                                 - ATRNY(IXY,JYP) * VFLY2D(IY,IX)   
+                                 - ATRNY(IXY,JYP) * VFLY2D(IY,IX)
 
 !/T3              WRITE (NDST,9041) ISEA, IXY, IXY-NY, IXY-1,         &
 !/T3                 VFLX2D(IY,IX-1), VFLX2D(IY,IX), VFLY2D(IY-1,IX), &
@@ -694,8 +735,9 @@
 !/T3              WRITE (NDST,9042) ISEA, MAPSTA(IXY), AOLD,FLD2D(IY,IX)
 !
           END IF !  IF (MAPSTA(IXY).EQ.1) THEN
-
-          FLD2D(IY,IX) = CG(IK,ISEA) / CLATS(ISEA) * FLD2D(IY,IX)
+          CONVERT_TO_SPHERICAL = CLATS(ISEA)
+!/GLOC          CONVERT_TO_SPHERICAL = 1.0
+          FLD2D(IY,IX) = CG(IK,ISEA) / CONVERT_TO_SPHERICAL * FLD2D(IY,IX)
 
         END DO !  DO ISEA=1, NSEA
 !
@@ -766,7 +808,8 @@
 !/ ------------------------------------------------------------------- /
       SUBROUTINE W3KTP1 ( ISEA, FACTH, FACK, CTHG0, CG, WN, DEPTH,    &
                           DDDX, DDDY, CX, CY, DCXDX, DCXDY, DCYDX,    &
-                          DCYDY, DCDX, DCDY, VA )
+                          DCYDY, DCDX, DCDY, VA, &
+                          DADP, DADQ, DPDX, DPDY, DQDX, DQDY, GANGL )
 !/
 !/                  +-----------------------------------+
 !/                  | WAVEWATCH III           NOAA/NCEP |
@@ -802,12 +845,16 @@
 !       DCxDx   Real   I   Current gradients.
 !       DCDX-Y  Real   I   Phase speed gradients.
 !       VA      R.A.  I/O  Spectrum.
+!       DADP/Q  Real   I*   Angle gradients (index-space)
+!       D(P/Q)D(X/Y) Real I* Index gradients
+!       GANGL   Real   I*   Grid angle (grid dp relative to North Pole)
+!       * - Optional
 !     ----------------------------------------------------------------
 !
 !     Local variables.
 !     ----------------------------------------------------------------
 !       DSDD    R.A.  Partial derivative of sigma for depth.
-!       FRK, FRG, FKC
+!       FRK, FRG, FKC, FRG_P, FRG_Q, FKC
 !               R.A.  Partial velocity terms.
 !       DWNI    R.A.  Inverse band width.
 !       CTH-WN  R.A.  Propagation velocities of local fluxes.
@@ -822,7 +869,7 @@
 !  5. Called by :
 !
 !      Name      Type  Module   Description
-!     ---------------------------------------------------------------- 
+!     ----------------------------------------------------------------
 !      W3WAVE    Subr. W3WAVEMD Wave model routine.
 !     ----------------------------------------------------------------
 !
@@ -879,6 +926,9 @@
       REAL, INTENT(IN)        :: FACTH, FACK, CTHG0, CG(0:NK+1),      &
                                  WN(0:NK+1), DEPTH, DDDX, DDDY,       &
                                  CX, CY, DCXDX, DCXDY, DCYDX, DCYDY
+      REAL, OPTIONAL, &
+            INTENT(IN)        :: DADP, DADQ, DPDX, DPDY, DQDX, DQDY,  &
+                                 GANGL
       REAL, INTENT(IN)        :: DCDX(0:NK+1), DCDY(0:NK+1)
       REAL, INTENT(INOUT)     :: VA(NSPEC)
 !/
@@ -890,10 +940,13 @@
       REAL                    :: FDDMAX, FDG, DCYX, DCXXYY, DCXY,     &
                                  DCXX, DCXYYX, DCYY, FKD, FKD0, CTHB, &
                                  CWNB
+!/GLOC       REAL             :: FDG_P, FDG_Q, SIN_GANGL, COS_GANGL
       REAL                    :: VCTH(NSPEC), VCWN(1-NTH:NSPEC+NTH),  &
                                  VAA(1-NTH:NSPEC+NTH), VFLTH(NSPEC),  &
                                  VFLWN(1-NTH:NSPEC), DSDD(0:NK+1),    &
                                  FRK(NK), FRG(NK), FKC(NTH), DWNI(NK)
+!/GLOC       REAL             :: FRG_P(NK), FRG_Q(NK)
+      LOGICAL                 :: USE_GRID_LOCAL
 !/
 !/ ------------------------------------------------------------------- /
 !/
@@ -903,6 +956,13 @@
 !/T      WRITE (NDST,9001) ISEA, DEPTH, CX, CY,                       &
 !/T             DDDX, DDDY, DCXDX, DCXDY, DCYDX, DCYDY
 !
+!/GLOC         IF ( .NOT.(PRESENT(DADP) .AND. PRESENT(DADQ) .AND. &
+!/GLOC                    PRESENT(DPDX) .AND. PRESENT(DPDY) .AND. &
+!/GLOC                    PRESENT(DQDX) .AND. PRESENT(DQDY) .AND. &
+!/GLOC                    PRESENT(GANGL) ) ) THEN
+!/GLOC            EXTCDE(999,MSG='W3KTP1 needs missing fields for '// &
+!/GLOC                 'grid-local closure (great-circle refraction).')
+!/GLOC         ENDIF
 ! 1.  Preparations --------------------------------------------------- *
 ! 1.a Array with partial derivative of sigma versus depth
 !
@@ -935,6 +995,10 @@
 !
           FDDMAX = 0.
           FDG    = FACTH * CTHG0
+!/GLOC            FDG_P = max(-1.e-1,min(1.e-1,-FACTH * DERA*(DADP*DPDX+DADP*DPDY)))
+!/GLOC            FDG_Q = max(-1.e-1,min(1.e-1,-FACTH * DERA*(DADQ*DQDX+DADQ*DQDY)))
+!/GLOC            COS_GANGL = COS(GANGL*DERA)
+!/GLOC            SIN_GANGL = SIN(GANGL*DERA)
 !
           DO ITH=1, NTH
             FDDMAX = MAX ( FDDMAX , ABS (                             &
@@ -945,13 +1009,22 @@
             FRK(IK) = FACTH * DSDD(IK) / WN(IK)
             FRK(IK) = FRK(IK) / MAX ( 1. , FRK(IK)*FDDMAX/CTMAX )
             FRG(IK) = FDG * CG(IK)
+!/GLOC            FRG_P(IK) = FDG_P * CG(IK)
+!/GLOC            FRG_Q(IK) = FDG_Q * CG(IK)
             END DO
 !
 ! 2.b Depth refraction and great-circle propagation
 !
           DO ISP=1, NSPEC
+!/GLOC      IF (.FALSE.) THEN ! Grid-local has different form.
             VCTH(ISP) = FRG(MAPWN(ISP)) * ECOS(ISP)                   &
               + FRK(MAPWN(ISP)) * ( ESIN(ISP)*DDDX - ECOS(ISP)*DDDY )
+!/GLOC      ELSE
+!/GLOC      VCTH(ISP) = FRG_P(MAPWN(ISP)) * ECOS(ISP) +&
+!/GLOC                  FRG_Q(MAPWN(ISP)) * ESIN(ISP) +&
+!/GLOC                  FRG(MAPWN(ISP))*&
+!/GLOC                  (ECOS(ISP)*COS_GANGL-ESIN(ISP)*SIN_GANGL)
+!/GLOC      ENDIF
             END DO
 !/DEBUG      WRITE(740+IAPROC,*) 'pro1 FACTH=', FACTH
 !/DEBUG      WRITE(740+IAPROC,*) 'pro1 CTHG0=', CTHG0
@@ -965,6 +1038,7 @@
 
 !
 !/REFRX! 2.c @C/@x refraction and great-circle propagation
+
 !/REFRX          VCTH = 0.
 !/REFRX          FRK  = 0.
 !/REFRX          FDDMAX = 0.
@@ -974,15 +1048,25 @@
 !/REFRX               ESIN(ISP)*DCDX(MAPWN(ISP)) - ECOS(ISP)*DCDY(MAPWN(ISP)) ) )
 !/REFRX            END DO
 !
+            USE_GRID_LOCAL = .FALSE.
+!/GLOC         USE_GRID_LOCAL = .True.
 !/REFRX          DO IK=1, NK
 !/REFRX            FRK(IK) = FACTH * CG(IK) * WN(IK) / SIG(IK)
 !/REFRX            FRK(IK) = FRK(IK) / MAX ( 1. , FRK(IK)*FDDMAX/CTMAX )
 !/REFRX            FRG(IK) = FDG * CG(IK)
 !/REFRX          END DO
 !/REFRX          DO ISP=1, NSPEC
+!/REFRX            IF (USE_GRID_LOCAL) THEN
+!/REFRX            VCTH(ISP) = FRG_Q(MAPWN(ISP)) * ECOS(ISP)                 &
+!/REFRX                        + FRG_P(MAPWN(ISP)) * ESIN(ISP)                 &
+!/REFRX                        + FRK(MAPWN(ISP)) * ( ESIN(ISP)*DCDX(MAPWN(ISP))&
+!/REFRX                        - ECOS(ISP)*DCDY(MAPWN(ISP)) )
+!/REFRX            ELSE
 !/REFRX            VCTH(ISP) = FRG(MAPWN(ISP)) * ECOS(ISP)            &
-!/REFRX              + FRK(MAPWN(ISP)) * ( ESIN(ISP)*DCDX(MAPWN(ISP)) &
-!/REFRX              - ECOS(ISP)*DCDY(MAPWN(ISP)) )
+!/REFRX                      + FRK(MAPWN(ISP)) * ( ESIN(ISP)*DCDX(MAPWN(ISP)) &
+!/REFRX                      - ECOS(ISP)*DCDY(MAPWN(ISP)) )
+!/REFRX
+!/REFRX            ENDIF
 !/REFRX          END DO
 !
 ! 2.d Current refraction
