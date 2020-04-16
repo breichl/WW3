@@ -22,7 +22,7 @@
 !/
 !/    Copyright 2009-2013 National Weather Service (NWS),
 !/       National Oceanic and Atmospheric Administration.  All rights
-!/       reserved.  WAVEWATCH III is a trademark of the NWS. 
+!/       reserved.  WAVEWATCH III is a trademark of the NWS.
 !/       No unauthorized use without permission.
 !/
 !  1. Purpose :
@@ -47,17 +47,17 @@
 !     ----------------------------------------------------------------
 !      TIME      I.A.  Public   Valid time for spectra.
 !      TIME00    I.A.  Public   Initial time
-!      TIMEEND   I.A.  Public   Final time 
+!      TIMEEND   I.A.  Public   Final time
 !      TLEV      I.A.  Public   Valid time for water levels.
 !      TICE      I.A.  Public   Valid time for ice concentration
 !      TIC1      I.A.  Public   Valid time for ice thickness
 !      TIC5      I.A.  Public   Valid time for ice floe
 !      VA        R.A.  Public   Storage array for spectra.
-!      WLV       R.A.  Public   Water levels.  
-!      ICE       R.A.  Public   Ice coverage.  
+!      WLV       R.A.  Public   Water levels.
+!      ICE       R.A.  Public   Ice coverage.
 !      ICEH      R.A.  Public   Ice thickness.
-!      ICEF      R.A.  Public   Ice flow maximum diameter. 
-!      ICEDMAX   R.A.  Public   Ice flow maximum diameter for updates. 
+!      ICEF      R.A.  Public   Ice flow maximum diameter.
+!      ICEDMAX   R.A.  Public   Ice flow maximum diameter for updates.
 !      BERG      R.A.  Public   Iceberg damping.
 !      UST       R.A.  Public   Friction velocity (absolute).
 !      USTDIR    R.A.  Public   Friction velocity direction.
@@ -121,7 +121,7 @@
 !/SETUP  REAL, POINTER :: ZETA_SETUP(:), FX_zs(:), FY_zs(:)
 !/SETUP  REAL, POINTER :: SXX_zs(:), SXY_zs(:), SYY_zs(:)
 !/PDLIB  REAL, POINTER     :: VSTOT(:,:), VDTOT(:,:)
-!/PDLIB  REAL, POINTER     :: VAOLD(:,:)
+        REAL, POINTER     :: VAOLD(:,:)
 !/PDLIB  LOGICAL, POINTER  :: SHAVETOT(:)
 !!/PDLIB     REAL, POINTER     :: VAOLD(:,:)
         LOGICAL               :: DINIT, FL_ALL
@@ -143,7 +143,7 @@
 !/SETUP        REAL, POINTER :: ZETA_SETUP(:), FX_zs(:), FY_zs(:)
 !/SETUP        REAL, POINTER :: SXX_zs(:), SXY_zs(:), SYY_zs(:)
 !/PDLIB      REAL, POINTER           :: VSTOT(:,:), VDTOT(:,:)
-!/PDLIB      REAL, POINTER           :: VAOLD(:,:)
+      REAL, POINTER           :: VAOLD(:,:)
 !/PDLIB      LOGICAL, POINTER        :: SHAVETOT(:)
 !!/PDLIB      REAL, POINTER           :: VAOLD(:,:)
       LOGICAL, POINTER        :: DINIT, FL_ALL
@@ -317,7 +317,7 @@
 !
 !  7. Remarks :
 !
-!     - W3SETW needs to be called after allocation to point to 
+!     - W3SETW needs to be called after allocation to point to
 !       proper allocated arrays.
 !
 !  8. Structure :
@@ -435,6 +435,7 @@
 !/DEBUGINIT    WRITE(740+IAPROC,*) 'W3DIMW, step 8.6, stat=', istat
 !/DEBUGINIT    FLUSH(740+IAPROC)
 !/PDLIB          ALLOCATE ( WDATAS(IMOD)%VAOLD(NSPEC,NSEAL), stat=istat )
+!/GLOC          ALLOCATE ( WDATAS(IMOD)%VAOLD(NSPEC,NSEAL), stat=istat )
 !/DEBUGINIT    WRITE(740+IAPROC,*) 'W3DIMW, step 8.7, stat=', istat
 !/DEBUGINIT    FLUSH(740+IAPROC)
 !/PDLIB          DO ISEA=1,NSEAL
@@ -615,7 +616,7 @@
       IF ( NWDATA .EQ. -1 ) THEN
           WRITE (NDSE,1001)
           CALL EXTCDE (1)
-        END IF   
+        END IF
 !
       IF ( IMOD.LT.0 .OR. IMOD.GT.NWDATA ) THEN
           WRITE (NDSE,1002) IMOD, NWDATA
@@ -650,6 +651,7 @@
 !/PDLIB            VSTOT     => WDATAS(IMOD)%VSTOT
 !/PDLIB            VDTOT     => WDATAS(IMOD)%VDTOT
 !/PDLIB            VAOLD     => WDATAS(IMOD)%VAOLD
+!/GLOC            VAOLD     => WDATAS(IMOD)%VAOLD
           END IF
           WLV    => WDATAS(IMOD)%WLV
           ICE    => WDATAS(IMOD)%ICE
