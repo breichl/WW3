@@ -360,53 +360,53 @@ EOF
   else
     case $WWATCH3_NETCDF in
       NC3)
-	if [ -z "$NETCDF_LIBDIR" ]
-	then
-	  netcdf_compile_message
-	  echo "$mode: NETCDF_LIBDIR not defined"; echo ' '
-	  return 1
-	fi
-	if [ -z "$NETCDF_INCDIR" ]
-	then
-	  netcdf_compile_message
-	  echo "$mode: NETCDF_INCDIR not defined"; echo ' '
-	  return 1
-	fi
+        if [ -z "$NETCDF_LIBDIR" ]
+        then
+          netcdf_compile_message
+          echo "$mode: NETCDF_LIBDIR not defined"; echo ' '
+          return 1
+        fi
+        if [ -z "$NETCDF_INCDIR" ]
+        then
+          netcdf_compile_message
+          echo "$mode: NETCDF_INCDIR not defined"; echo ' '
+          return 1
+        fi
       ;;
       NC4)
-	if [ ! -n "`grep NC4 $switch_file`" ]
-	then
-	  echo "WARNING: NC4 is set in WWATCH3_NETCDF but not in the switch file"; echo ' '
+        if [ ! -n "`grep NC4 $switch_file`" ]
+        then
+          echo "WARNING: NC4 is set in WWATCH3_NETCDF but not in the switch file"; echo ' '
 #          return 1
-	fi
-	if [ -z "$NETCDF_CONFIG" ]
-	then
-	  netcdf_compile_message
-	  echo "$mode: NETCDF_CONFIG not defined"; echo ' '
-	  return 1
-	fi
-	if [ ! -x "$NETCDF_CONFIG" ]
-	then
-	  netcdf_compile_message
-	  echo "$mode: $NETCDF_CONFIG does not exist or is not executable"; echo ' '
-	  return 1
-	fi
-	netcdf_version=`$NETCDF_CONFIG --version | awk '{print $2}'`
-	if [ -z "`echo $netcdf_version | cut -d. -f3`" ]
-	then
-	  netcdf_version="$netcdf_version.0"
-	fi
-	if [ `echo $netcdf_version | tr -d .` -lt 411 ]
-	then
-	  netcdf_compile_message
-	  echo "$mode: NetCDF version $netcdf_version < 4.1.1"; echo ' '
-	  return 1
-	fi
+        fi
+        if [ -z "$NETCDF_CONFIG" ]
+        then
+          netcdf_compile_message
+          echo "$mode: NETCDF_CONFIG not defined"; echo ' '
+          return 1
+        fi
+        if [ ! -x "$NETCDF_CONFIG" ]
+        then
+          netcdf_compile_message
+          echo "$mode: $NETCDF_CONFIG does not exist or is not executable"; echo ' '
+          return 1
+        fi
+        netcdf_version=`$NETCDF_CONFIG --version | awk '{print $2}'`
+        if [ -z "`echo $netcdf_version | cut -d. -f3`" ]
+        then
+          netcdf_version="$netcdf_version.0"
+        fi
+        if [ `echo $netcdf_version | tr -d .` -lt 411 ]
+        then
+          netcdf_compile_message
+          echo "$mode: NetCDF version $netcdf_version < 4.1.1"; echo ' '
+          return 1
+        fi
       ;;
       *)
-	netcdf_compile_message
-	echo "$mode: WWATCH3_NETCDF=$WWATCH3_NETCDF not supported"; echo ' '
-	return 1
+        netcdf_compile_message
+        echo "$mode: WWATCH3_NETCDF=$WWATCH3_NETCDF not supported"; echo ' '
+        return 1
       ;;
     esac
   fi
@@ -424,17 +424,17 @@ EOF
   then
     case $WWATCH3_NETCDF in
       NC3)
-	netcdf_compile_message
-	echo "$mode: WWATCH3_NETCDF=NC3 incompatible with NC4 switch"; echo ' '
-	return 1
+        netcdf_compile_message
+        echo "$mode: WWATCH3_NETCDF=NC3 incompatible with NC4 switch"; echo ' '
+        return 1
       ;;
       NC4)
-	if [ "`$NETCDF_CONFIG --has-nc4`" = 'no' ]
-	then
-	  netcdf_compile_message
-	  echo "$mode: NetCDF-4 API not enabled (required by NC4 switch)"; echo ' '
-	  return 1
-	fi
+        if [ "`$NETCDF_CONFIG --has-nc4`" = 'no' ]
+        then
+          netcdf_compile_message
+          echo "$mode: NetCDF-4 API not enabled (required by NC4 switch)"; echo ' '
+          return 1
+        fi
       ;;
     esac
   fi
@@ -452,8 +452,8 @@ EOF
       echo "will not be compiled unless NetCDF compile environment is properly set."; echo ' '
       if [ $systrck_nc4notrknc -eq 1 ]
       then
-	 echo "WARNING: ww3_systrk will not be compiled due to invalid switch option."; echo ' '
-	 echo "TRKNC switch is also required with NC4."; echo ' '
+         echo "WARNING: ww3_systrk will not be compiled due to invalid switch option."; echo ' '
+         echo "TRKNC switch is also required with NC4."; echo ' '
       fi
       echo "Continuing with compile of non-NetCDF programs ..."; echo ' '
       progs="$reg_programs"
@@ -464,17 +464,17 @@ EOF
     do
       if [ -n "`echo $progs | grep $prog`" ]
       then
-	nc_compile=1
+        nc_compile=1
       fi
     done
     if [ $nc_compile -eq 1 ]
     then
       if ! netcdf_check_compile ERROR
       then
-	echo "NetCDF enabled programs ($cdf_programs)"
-	echo "will not be compiled unless NetCDF compile environment is properly set."; echo ' '
-	echo "Now exiting ..."; echo ' '
-	exit 1
+        echo "NetCDF enabled programs ($cdf_programs)"
+        echo "will not be compiled unless NetCDF compile environment is properly set."; echo ' '
+        echo "Now exiting ..."; echo ' '
+        exit 1
       fi
     fi
     systrkprog="ww3_systrk"
@@ -482,13 +482,13 @@ EOF
     do
       if [ -n "`echo $progs | grep $prog`" ]
       then
-	if [ $systrck_nc4notrknc -eq 1 ]
-	then
-	  echo "ERROR: ww3_systrk will not be compiled due to invalid switch option."; echo ' '
-	  echo "TRKNC switch is also required with NC4."; echo ' '
-	  echo "Now exiting ..."; echo ' '
-	  exit 1
-	fi
+        if [ $systrck_nc4notrknc -eq 1 ]
+        then
+          echo "ERROR: ww3_systrk will not be compiled due to invalid switch option."; echo ' '
+          echo "TRKNC switch is also required with NC4."; echo ' '
+          echo "Now exiting ..."; echo ' '
+          exit 1
+        fi
       fi
     done
   fi
@@ -534,23 +534,23 @@ EOF
     then
       if [ "$flag_SHRD" -gt '0' ]
       then
-	if [ "$flag_OMPX" -gt '0' ]
-	then
-	  cp $switch_file ${switch_file_old}_OMP
-	  cp $makefile ${makefile}_OMP
-	else
-	  cp $switch_file ${switch_file_old}_SEQ
-	  cp $makefile ${makefile}_SEQ
-	fi
+        if [ "$flag_OMPX" -gt '0' ]
+        then
+          cp $switch_file ${switch_file_old}_OMP
+          cp $makefile ${makefile}_OMP
+        else
+          cp $switch_file ${switch_file_old}_SEQ
+          cp $makefile ${makefile}_SEQ
+        fi
       else
-	if [ "$flag_OMPH" -gt '0' ]
-	then
-	  cp $switch_file ${switch_file_old}_HYB
-	  cp $makefile ${makefile}_HYB
-	else
-	  cp $switch_file ${switch_file_old}_MPI
-	  cp $makefile ${makefile}_MPI
-	fi
+        if [ "$flag_OMPH" -gt '0' ]
+        then
+          cp $switch_file ${switch_file_old}_HYB
+          cp $makefile ${makefile}_HYB
+        else
+          cp $switch_file ${switch_file_old}_MPI
+          cp $makefile ${makefile}_MPI
+        fi
       fi
     else
       exit 1
@@ -584,7 +584,7 @@ EOF
     do
       if test "$prog" = "$check"
       then
-	OK='y'
+        OK='y'
       fi
     done
     if test "$OK" = 'n'
@@ -600,28 +600,28 @@ EOF
       netcdf_compile=no
       if [ -n "`echo $cdf_programs | grep $prog`" ]
       then
-	netcdf_compile=yes
+        netcdf_compile=yes
       fi
       export netcdf_compile
 
       mpi_mod=no
       if [ -n "`grep MPI $switch_file`" ]
       then
-	mpi_mod=yes
+        mpi_mod=yes
       fi
       export mpi_mod
 
       omp_mod=no
       if [ -n "`grep OMP $switch_file`" ]
       then
-	omp_mod=yes
+        omp_mod=yes
       fi
       export omp_mod
 
       oasis_mod=no
       if [ -n "`grep OASIS $switch_file`" ]
       then
-	export oasis_mod='yes'
+        export oasis_mod='yes'
       fi
       export oasis_mod
 
@@ -629,8 +629,8 @@ EOF
       esmfpdlib=''
       if [ -n "`grep PDLIB $switch_file`" ]
       then
-	export pdlib_mod='yes'
-	esmfpdlib="$METIS_PATH/lib/libparmetis.a $METIS_PATH/lib/libmetis.a"
+        export pdlib_mod='yes'
+        esmfpdlib="$METIS_PATH/lib/libparmetis.a $METIS_PATH/lib/libmetis.a"
       fi
       export pdlib_mod
 
@@ -641,30 +641,30 @@ EOF
       # processed to get required ESMF compile options
       if [ -n "`echo $prog | grep esmf 2>/dev/null`" ]
       then
-	if [ -z "`grep DIST $switch_file`" ]
-	then
-	  echo ' '
-	  echo "*** DIST switch must be set when compiling with ESMF ***"
-	  echo ' '
-	  exit 1
-	fi
-	ESMF_F90COMPILEPATHS=
-	if [ $ESMFMKFILE ]
-	then
-	  if [ ! -r $ESMFMKFILE ]
-	  then
-	    echo ' '
-	    echo "*** ESMFMKFILE does not exist or is not readable: $ESMFMKFILE ***"
-	    echo ' '
-	    exit 1
-	  fi
-	  ESMF_F90COMPILEPATHS=`cat $ESMFMKFILE | grep '^ *ESMF_F90COMPILEPATHS' | sed 's/^ *ESMF_F90COMPILEPATHS *=//g'`
-	else
-	  echo ' '
-	  echo "*** ESMFMKFILE must be defined when compiling with ESMF ***"
-	  echo ' '
-	  exit 1
-	fi
+        if [ -z "`grep DIST $switch_file`" ]
+        then
+          echo ' '
+          echo "*** DIST switch must be set when compiling with ESMF ***"
+          echo ' '
+          exit 1
+        fi
+        ESMF_F90COMPILEPATHS=
+        if [ $ESMFMKFILE ]
+        then
+          if [ ! -r $ESMFMKFILE ]
+          then
+            echo ' '
+            echo "*** ESMFMKFILE does not exist or is not readable: $ESMFMKFILE ***"
+            echo ' '
+            exit 1
+          fi
+          ESMF_F90COMPILEPATHS=`cat $ESMFMKFILE | grep '^ *ESMF_F90COMPILEPATHS' | sed 's/^ *ESMF_F90COMPILEPATHS *=//g'`
+        else
+          echo ' '
+          echo "*** ESMFMKFILE must be defined when compiling with ESMF ***"
+          echo ' '
+          exit 1
+        fi
       fi
       export ESMF_F90COMPILEPATHS
 
@@ -672,28 +672,28 @@ EOF
       # the target is compile and create archive
       if [ -n "`echo $prog | grep esmf 2>/dev/null`" ]
       then
-	target="$prog"
+        target="$prog"
       # if program name is libww3, then
       # the target is compile and create archive
       elif [ "$prog" = "libww3" ]
       then
-	target="$prog"
+        target="$prog"
       elif [ "$prog" = "libww3.so" ]
       then
-	target="$prog"
+        target="$prog"
       else
-	target="$aPe/$prog"
+        target="$aPe/$prog"
       fi
 
       if [ ! -f $exec_type_file ] ; then
-	  touch $exec_type_file ; fi
+          touch $exec_type_file ; fi
 
       if [ `grep $prog $exec_type_file | wc -l | awk '{ print $1}'` != '0' ]
       then
-	exec_type=`grep $prog $exec_type_file | tail -1 | awk '{ print $2}'`
+        exec_type=`grep $prog $exec_type_file | tail -1 | awk '{ print $2}'`
       fi
       if [ "$exec_type" != "$pres_type" ] ; then
-	  rm -f $main_dir/exe/$prog  ; fi
+          rm -f $main_dir/exe/$prog  ; fi
 
       cp $exec_type_file tempfile
       sed -n "/$prog/!p" tempfile > $exec_type_file
@@ -705,9 +705,9 @@ EOF
       # it defaults to 4
       if make -j ${WW3_PARCOMPN:-4} -f makefile $target
       then
-	echo ' '
+        echo ' '
       else
-	exit 1
+        exit 1
       fi
 
       echo "$prog $pres_type" >> $exec_type_file
@@ -715,29 +715,29 @@ EOF
       # if esmf is included in program name, then create $main_dir/nuopc.mk
       if [ -n "`echo $prog | grep esmf 2>/dev/null`" ]
       then
-	mkfile=$main_dir/nuopc.mk
-	if [ -n "`grep OMP $switch_file`" ]
-	then
-	  mod_dir=$main_dir/mod_HYB
-	  obj_dir=$main_dir/obj_HYB
-	else
-	  mod_dir=$main_dir/mod_MPI
-	  obj_dir=$main_dir/obj_MPI
-	fi
-	rm -f $mkfile
-	touch $mkfile
-	echo "#-----------------------------------------------"      >> $mkfile
-	echo "# NUOPC/ESMF self-describing build dependency"         >> $mkfile
-	echo "# makefile fragment for Wavewatch III"                 >> $mkfile
-	echo "#-----------------------------------------------"      >> $mkfile
-	echo "# component module name"                               >> $mkfile
-	echo "ESMF_DEP_FRONT := WMESMFMD"                            >> $mkfile
-	echo "# component module path"                               >> $mkfile
-	echo "ESMF_DEP_INCPATH := $mod_dir"                          >> $mkfile
-	echo "# component module objects"                            >> $mkfile
-	echo "ESMF_DEP_CMPL_OBJS := $obj_dir/lib$prog.a(wmesmfmd.o)" >> $mkfile
-	echo "# component object/archive list"                       >> $mkfile
-	echo "ESMF_DEP_LINK_OBJS := $obj_dir/lib$prog.a $esmfpdlib"  >> $mkfile
+        mkfile=$main_dir/nuopc.mk
+        if [ -n "`grep OMP $switch_file`" ]
+        then
+          mod_dir=$main_dir/mod_HYB
+          obj_dir=$main_dir/obj_HYB
+        else
+          mod_dir=$main_dir/mod_MPI
+          obj_dir=$main_dir/obj_MPI
+        fi
+        rm -f $mkfile
+        touch $mkfile
+        echo "#-----------------------------------------------"      >> $mkfile
+        echo "# NUOPC/ESMF self-describing build dependency"         >> $mkfile
+        echo "# makefile fragment for Wavewatch III"                 >> $mkfile
+        echo "#-----------------------------------------------"      >> $mkfile
+        echo "# component module name"                               >> $mkfile
+        echo "ESMF_DEP_FRONT := WMESMFMD"                            >> $mkfile
+        echo "# component module path"                               >> $mkfile
+        echo "ESMF_DEP_INCPATH := $mod_dir"                          >> $mkfile
+        echo "# component module objects"                            >> $mkfile
+        echo "ESMF_DEP_CMPL_OBJS := $obj_dir/lib$prog.a(wmesmfmd.o)" >> $mkfile
+        echo "# component object/archive list"                       >> $mkfile
+        echo "ESMF_DEP_LINK_OBJS := $obj_dir/lib$prog.a $esmfpdlib"  >> $mkfile
       fi
 
     fi
