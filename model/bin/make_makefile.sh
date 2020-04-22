@@ -333,7 +333,7 @@
                TS='ARC'
                OK='ARC' ;;
 #sort:gloc:
-      gloc)    TY='upto1'
+      gloc   ) TY='upto1'
                ID='Switch for Grid-local (e.g., for tripolar)'
                OK='GLOC';;
 #sort:nnt:
@@ -640,10 +640,6 @@
         stx=$NULL ;;
   esac
 
-  case $gloc in
-   GLOC) glc='w3ncgmmd' ;;
-  esac
-
   if [ "$stab" = 'STAB2' ] && [ "$s_inds" != 'ST2' ]
   then
       echo ' '
@@ -781,6 +777,10 @@
   case $pdlib in
    PDLIB) pdlibcode='yowfunction pdlib_field_vec w3profsmd_pdlib'
           pdlibyow='yowsidepool yowdatapool yowerr yownodepool yowelementpool yowexchangeModule yowrankModule yowpdlibmain yowpd' ;;
+   esac
+
+  case $gloc in
+   GLOC) glc='w3ncgmmd' ;;
    esac
 
   memcode=$NULL
@@ -1103,7 +1103,7 @@
                 aux="constants w3servmd w3timemd $tidecode w3arrymd w3dispmd w3cspcmd w3gsrumd" ;;
      ww3_uprstr) IDstring='Update Restart File'
               core=
-              data="wmmdatmd w3triamd w3gdatmd $glc w3wdatmd w3adatmd w3idatmd w3odatmd"
+	      data="wmmdatmd w3triamd w3gdatmd $glc w3wdatmd w3adatmd w3idatmd w3odatmd"
               prop=
             source="$memcode $pdlibcode $pdlibyow $flx $ln $st $nl $bt $ic $is $db $tr $bs $xx $uostmd"
                 IO='w3iogrmd w3iogomd w3iorsmd'
@@ -1151,7 +1151,7 @@
       do
         objs="$objs $file.o"
       done
-      echo "   @cd \$(aPo); $ar_cmd $lib $objs" >> makefile
+      echo "	@cd \$(aPo); $ar_cmd $lib $objs" >> makefile
       echo ' '                                   >> makefile
     # if program name is libww3, then
     # the target is compile and create archive
@@ -1163,7 +1163,7 @@
       do
         objs="$objs $file.o"
       done
-      echo "   @cd \$(aPo); $ar_cmd $lib $objs" >> makefile
+      echo "	@cd \$(aPo); $ar_cmd $lib $objs" >> makefile
       echo ' '                                   >> makefile
     # if program name is libww3.so, then
     # the target is compile and create archive
@@ -1175,11 +1175,11 @@
       do
         objs="$objs $file.o"
       done
-      echo "   @cd \$(aPo); ld -o $lib -shared $objs" >> makefile
+      echo "	@cd \$(aPo); ld -o $lib -shared $objs" >> makefile
       echo ' '                                   >> makefile
 
     else
-      echo '   @$(aPb)/link '"$filesl"          >> makefile
+      echo '	@$(aPb)/link '"$filesl"          >> makefile
       echo ' '                                   >> makefile
     fi
 
@@ -1238,7 +1238,7 @@
     fi
 
     string1='$(aPo)/'$file'.o : '$file.$fexti' 'w3macros.h' '
-    string2='  @$(aPb)/ad3'" $file"
+    string2='	@$(aPb)/ad3'" $file"
     string3="$NULL"
 
     if [ "$ispdlibi" = 'yes' ]
