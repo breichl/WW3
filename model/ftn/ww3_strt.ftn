@@ -204,7 +204,7 @@
 !/
       INTEGER                 :: NDSI, NDSM, NDSR, NDSTRC, NTRACE,    &
                                  NDSEN, IERR, ITYPE, NCOS, IKM, IK,   &
-                                 ITHM, ITH, JSEA, ISEA, IX, IY, J 
+                                 ITHM, ITH, JSEA, ISEA, IX, IY, J
 !/MPI      INTEGER                 :: IERR_MPI
 !/S      INTEGER, SAVE           :: IENT = 0
 !/O6      INTEGER                 :: NSX, NSY
@@ -479,7 +479,7 @@
 !/GLOC                        DD(ITH) = 0.
 !/GLOC                     END IF
 !/GLOC                  ELSE
-!/GLOC                     DD(ITH) = MAX ( COS(TH(ITH)-(THM-GANGL(IY,IX)*DERA)) , 0. )**NCOS
+!/GLOC                     DD(ITH) = MAX ( COS(TH(ITH) +GANGL(IY,IX)*DERA -THM) , 0. )**NCOS
 !/GLOC                  END IF
 !/GLOC               END DO
 !/GLOC               ETOT   = 0.
