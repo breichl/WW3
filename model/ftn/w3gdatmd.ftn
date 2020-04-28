@@ -602,7 +602,7 @@
       INTEGER, PARAMETER      :: ICLOSE_TRPL = ICLO_TRPL
 
 !/GLOC      LOGICAL                 :: READ_GRID_METRICS = .FALSE.
-!/GLOC      CHARACTER(30)           :: GRID_METRIC_FILENAME
+!/GLOC      CHARACTER(50)           :: GRID_METRIC_FILENAME
 !
 ! Dimensions of tables for pre-computing of dissipation
 !

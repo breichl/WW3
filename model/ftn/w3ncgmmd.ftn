@@ -77,7 +77,7 @@
            ANGL, SINA, COST, SINT, &
            DADP, DADQ, DADX, DADY, GANGL)
 !/
-        CHARACTER(30), INTENT(IN) :: GRID_METRIC_FILENAME
+        CHARACTER(50), INTENT(IN) :: GRID_METRIC_FILENAME
         INTEGER, INTENT(IN)   :: LBI(2), UBI(2)
         INTEGER, INTENT(IN)   :: LBO(2), UBO(2)
         REAL, INTENT(IN)   :: X(LBI(1):UBI(1),LBI(2):UBI(2))
@@ -296,7 +296,7 @@
 !/
         USE NETCDF
 !/
-        CHARACTER(LEN=30), INTENT(IN) &
+        CHARACTER(LEN=50), INTENT(IN) &
              :: GRID_METRIC_FILENAME !< The filename for the netCDF file.
         CHARACTER(LEN=14), INTENT(IN) &
              :: VAR !< The variable to be read from the netCDF file.

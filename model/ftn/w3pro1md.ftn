@@ -996,11 +996,11 @@
 ! 2.a Set slope filter for depth refraction
 !
           FDDMAX = 0.
-!/GLOC              COS_GANGL = COS(GANGL*DERA)
-!/GLOC              SIN_GANGL = SIN(GANGL*DERA)
+!/GLOC          COS_GANGL = COS(GANGL*DERA)
+!/GLOC          SIN_GANGL = SIN(GANGL*DERA)
           FDG    = FACTH * CTHG0
-!/GLOC              FDG_P = -FACTH * DERA*(DADP*DPDX+DADP*DPDY)
-!/GLOC              FDG_Q = -FACTH * DERA*(DADQ*DQDX+DADQ*DQDY)
+!/GLOC          FDG_P = -FACTH * DERA*(DADP*DPDX+DADP*DPDY)
+!/GLOC          FDG_Q = -FACTH * DERA*(DADQ*DQDX+DADQ*DQDY)
 !
           DO ITH=1, NTH
             FDDMAX = MAX ( FDDMAX , ABS (                             &
