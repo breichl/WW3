@@ -2900,10 +2900,10 @@
 !/SHRD            FIELD2(IXY) = A(ISPEC2,ISEA)
 !/SHRD          ENDIF
 !/GLOC        ELSE
-!/SHRD          FIELD(IXY) = AOLD(ISPEC,ISEA)
-!/SHRD          IF (FIELD2_PRESENT) THEN
-!/SHRD            FIELD2(IXY) = AOLD(ISPEC2,ISEA)
-!/SHRD          ENDIF
+!/GLOC          FIELD(IXY) = AOLD(ISPEC,ISEA)
+!/GLOC          IF (FIELD2_PRESENT) THEN
+!/GLOC            FIELD2(IXY) = AOLD(ISPEC2,ISEA)
+!/GLOC          ENDIF
 !/GLOC        ENDIF
 !/SHRD      ENDDO
 !
