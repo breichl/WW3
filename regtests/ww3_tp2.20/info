@@ -1,0 +1,74 @@
+#############################################################################
+#                                                                           #
+# ww3_tp2.20 Test script for WW-III, two-dimensional propagation.           #
+#           Propagation and tripolar closure with grid-local spectrum.      #
+#                                                                           #
+#           This test case is modeled after ww3_tp2.13, but using a         #
+#           different grid.  The chosen grid is packaged with a file        #
+#           storing data about the grid that can be used to compute the     #
+#           grid metrics, such as dx, dy, and angle relative to a lat/long  #
+#           compass.                                                        #
+#                                                                           #
+#           In this test case a swell field is initialized north of 80N     #
+#           in a half-degree tripolar global grid.  The swell is then       #
+#           advected north, crossing the north pole, and then advects to    #
+#           the south.  This is to demonstrate the ability of the grid-     #
+#           local directional definition to allow swell to propagate        #
+#           across 90N, which cannot happen with the usual compass relative #
+#           definition of the wave spectral directions                      #
+#                                                                           #
+#---------------------------------------------------------------------------#
+# Files in test case:                                                       #
+#                                                                           #
+#   input  -- Grid -- Glob_TriPolar_05.Dpt: A text file storing the depths  #
+#           |      |                                                        #
+#           |      -- Glob_TriPolar_05.1000.Dpt: A text file storing the    #
+#           |      |                              depths, but replaced with #
+#           |      |                              uniform 1000 m.           #
+#           |      |                                                        #
+#           |      -- GlobTriPolar_05.Lat: A text file storing the          #
+#           |      |                       latitudes                        #
+#           |      |                                                        #
+#           |      -- GlobTriPolar_05.Lon: A text file storing the          #
+#           |      |                       longitudes                       #
+#           |      |                                                        #
+#           |      |                                                        #
+#           |      -- GlobTriPolar_05.Mask_80_88: A text file storing the   #
+#           |      |                              mask, masking <80N and    #
+#           |      |                              >88N                      #
+#           |      |                                                        #
+#           |      -- GlobTriPolar_05.Mask_80_NP: A text file storing the   #
+#           |      |                              mask, masking <80N        #
+#           |      |                                                        #
+#           |      -- GlobTriPolar_05.Obstr: A text file storing an         #
+#           |      |                         obstruction grid, in this case #
+#           |      |                         all points are unobstructed    #
+#           |      |                                                        #
+#           |      -- ocean_hgrid_05.nc: A non git-controlled file that     #
+#           |                            stores the super-grid information, #
+#           |                            particularly DX, DY, and the grid  #
+#           |                            grid angle for a curvilinear grid  #
+#           |                            that is obtained in the step of    #
+#           |                            running ww3_from_ftp.sh
+#           |                                                               #
+#           -- switch: A default (non-MPI) switch file ding GLOC            #
+#           |                                                               #
+#           -- switch_MPI: A MPI switch file including GLOC                 #
+#           |                                                               #
+#           -- ww3_grid.inp: A grid input file with TRPL closure            #
+#           |                                                               #
+#           -- ww3_strt.inp: An initialized swell for propagation tests     #
+#           |                                                               #
+#           -- ww3_shel.inp: A shel input file for the propagation tests    #
+#           |                                                               #
+#           -- ww3_ounf.inp: Input file for NetCDF output generator         #
+#                                                                           #
+# Analysis -- PlotTP.ipynb: A sample python Notebook for plotting the       #
+#                           tripolar test case results                      #
+#                                                                           #
+#---------------------------------------------------------------------------#
+#                                                                           #
+# Sample run_test commands :                                                #
+#  ./bin/run_test ../model ../ww3_tp2.20 -w work -o netcdf                  #
+#                                                                           #
+#############################################################################

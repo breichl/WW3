@@ -657,8 +657,8 @@
         REAL   , POINTER :: GSQRT(:,:) ! SQRT(G) DEFINED ON IX,IY
         REAL   , POINTER :: HPFAC(:,:) ! H_P = SQRT(G_PP) DEFINED ON IX,IY
         REAL   , POINTER :: HQFAC(:,:) ! H_Q = SQRT(G_QQ) DEFINED ON IX,IY
-        REAL   , POINTER :: GANGL(:,:) ! Angle between geographic North Pole and i-direction defined on IX,IY
-        REAL   , POINTER :: DADP(:,:), DADQ(:,:) ! D/DP & D/DQ of GANGL DEFINED ON IX,IY
+!/GLOC        REAL   , POINTER :: GANGL(:,:) ! Angle between geographic North Pole and i-direction defined on IX,IY
+!/GLOC        REAL   , POINTER :: DADP(:,:), DADQ(:,:) ! D/DP & D/DQ of GANGL DEFINED ON IX,IY
 
         LOGICAL          :: GINIT, FLDRY, FLCX, FLCY, FLCTH, FLCK, FLSOU, IICEDISP,&
                             IICESMOOTH
@@ -1022,8 +1022,8 @@
       REAL   , POINTER :: GSQRT(:,:) ! SQRT(G) DEFINED ON IX,IY
       REAL   , POINTER :: HPFAC(:,:) ! H_P = SQRT(G_PP) DEFINED ON IX,IY
       REAL   , POINTER :: HQFAC(:,:) ! H_Q = SQRT(G_QQ) DEFINED ON IX,IY
-      REAL   , POINTER :: GANGL(:,:) ! Angle between geographic North Pole and i-direction defined on IX,IY
-      REAL   , POINTER :: DADP(:,:), DADQ(:,:) ! D/DP & D/DQ of GANGL DEFINED ON IX,IY
+!/GLOC      REAL   , POINTER :: GANGL(:,:) ! Angle between geographic North Pole and i-direction defined on IX,IY
+!/GLOC      REAL   , POINTER :: DADP(:,:), DADQ(:,:) ! D/DP & D/DQ of GANGL DEFINED ON IX,IY
 !/BT4        REAL, POINTER         :: SED_D50(:), SED_PSIC(:)
 
       LOGICAL, POINTER :: GINIT, FLDRY, FLCX, FLCY, FLCTH, FLCK, FLSOU, IICEDISP,&
@@ -1477,9 +1477,9 @@
                  GRIDS(IMOD)%GSQRT(MY,MX),   &
                  GRIDS(IMOD)%HPFAC(MY,MX),   &
                  GRIDS(IMOD)%HQFAC(MY,MX),   &
-                 GRIDS(IMOD)%DADP(MY,MX),    &
-                 GRIDS(IMOD)%DADQ(MY,MX),    &
-                 GRIDS(IMOD)%GANGL(MY,MX),   &
+!/GLOC                 GRIDS(IMOD)%DADP(MY,MX),    &
+!/GLOC                 GRIDS(IMOD)%DADQ(MY,MX),    &
+!/GLOC                 GRIDS(IMOD)%GANGL(MY,MX),   &
                  STAT=ISTAT                  )
       CHECK_ALLOC_STATUS ( ISTAT )
 !!/DEBUGINIT         WRITE(740+IAPROC,*) 'After alocation of MAPST2, MY=', MY, ' MX=', MX
@@ -2086,9 +2086,9 @@
           GSQRT  => GRIDS(IMOD)%GSQRT
           HPFAC  => GRIDS(IMOD)%HPFAC
           HQFAC  => GRIDS(IMOD)%HQFAC
-          DADP   => GRIDS(IMOD)%DADP
-          DADQ   => GRIDS(IMOD)%DADQ
-          GANGL  => GRIDS(IMOD)%GANGL
+!/GLOC          DADP   => GRIDS(IMOD)%DADP
+!/GLOC          DADQ   => GRIDS(IMOD)%DADQ
+!/GLOC          GANGL  => GRIDS(IMOD)%GANGL
 !
 !/BT4          SED_D50  => GRIDS(IMOD)%SED_D50
 !/BT4          SED_PSIC => GRIDS(IMOD)%SED_PSIC

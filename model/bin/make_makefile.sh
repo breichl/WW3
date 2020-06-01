@@ -333,7 +333,7 @@
                TS='ARC'
                OK='ARC' ;;
 #sort:gloc:
-      gloc)    TY='upto1'
+      gloc   ) TY='upto1'
                ID='Switch for Grid-local (e.g., for tripolar)'
                OK='GLOC';;
 #sort:nnt:
