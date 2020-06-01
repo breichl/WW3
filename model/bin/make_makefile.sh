@@ -1151,7 +1151,7 @@
       do
         objs="$objs $file.o"
       done
-      echo "   @cd \$(aPo); $ar_cmd $lib $objs" >> makefile
+      echo "	@cd \$(aPo); $ar_cmd $lib $objs" >> makefile
       echo ' '                                   >> makefile
     # if program name is libww3, then
     # the target is compile and create archive
@@ -1163,7 +1163,7 @@
       do
         objs="$objs $file.o"
       done
-      echo "   @cd \$(aPo); $ar_cmd $lib $objs" >> makefile
+      echo "	@cd \$(aPo); $ar_cmd $lib $objs" >> makefile
       echo ' '                                   >> makefile
     # if program name is libww3.so, then
     # the target is compile and create archive
@@ -1175,11 +1175,11 @@
       do
         objs="$objs $file.o"
       done
-      echo "   @cd \$(aPo); ld -o $lib -shared $objs" >> makefile
+      echo "	@cd \$(aPo); ld -o $lib -shared $objs" >> makefile
       echo ' '                                   >> makefile
 
     else
-      echo '   @$(aPb)/link '"$filesl"          >> makefile
+      echo '	@$(aPb)/link '"$filesl"          >> makefile
       echo ' '                                   >> makefile
     fi
 
@@ -1238,7 +1238,7 @@
     fi
 
     string1='$(aPo)/'$file'.o : '$file.$fexti' 'w3macros.h' '
-    string2='        @$(aPb)/ad3'" $file"
+    string2='	@$(aPb)/ad3'" $file"
     string3="$NULL"
 
     if [ "$ispdlibi" = 'yes' ]
