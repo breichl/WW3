@@ -30,14 +30,14 @@
 !/    12-Dec-2012 : SMC grid sea-point text output.JG_Li( version 4.08 )
 !/    25-Dec-2012 : New structure of output fields.     ( version 4.11 )
 !/                  Minor bug fixes and clean up.
-!/    11-Nov-2013 : SMC and rotated grid incorporated in the main 
+!/    11-Nov-2013 : SMC and rotated grid incorporated in the main
 !/                  trunk                               ( version 4.13 )
 !/    27-Aug-2015 : ICEH and ICEF added as output       ( version 5.10 )
 !/    12-Sep-2018 : Added new partitioned output fields ( version 6.06 )
 !/
 !/    Copyright 2009-2012 National Weather Service (NWS),
 !/       National Oceanic and Atmospheric Administration.  All rights
-!/       reserved.  WAVEWATCH III is a trademark of the NWS. 
+!/       reserved.  WAVEWATCH III is a trademark of the NWS.
 !/       No unauthorized use without permission.
 !/
 !  1. Purpose :
@@ -230,7 +230,7 @@
 !
       CALL W3READFLGRD ( NDSI, NDSO, 9, NDSE, COMSTR, FLOG,      &
                          FLREQ, 1, 1, IERR )
-      IF (IERR.NE.0) GOTO 800 
+      IF (IERR.NE.0) GOTO 800
 
 !
 ! ... Output type
@@ -575,6 +575,7 @@
 !/ ------------------------------------------------------------------- /
       USE W3SERVMD, ONLY : W3S2XY
 !/RTD      USE W3SERVMD, ONLY : W3THRTN, W3XYRTN
+!/GLOC      USE W3SERVMD, ONLY : W3THRTN, W3XYRTN
       USE W3ARRYMD, ONLY : OUTA2I, PRTBLK
 !/
 !/ ------------------------------------------------------------------- /
@@ -602,6 +603,7 @@
 !!Li  Type 4 sea point only text output variables.  JGLi25Jun2013
       REAL, Dimension(NSEA)   :: XS1, XS2, XS3, XS4
 !!Li
+      REAL, Dimension(NSEA)   :: GLOC_ANG
       DOUBLE PRECISION        :: XDS, XDSQ
       LOGICAL                 :: FLONE, FLTWO, FLDIR, FLTRI
 !/T      LOGICAL                 :: LTEMP(NGRPP)
@@ -615,7 +617,7 @@
 !/
 !/S      CALL STRACE (IENT, 'W3EXGO')
 !
-!/T      DO IFI=1, NOGRP 
+!/T      DO IFI=1, NOGRP
 !/T        LTEMP  = FLREQ(IFI,:)
 !/T        WRITE (NDST,9000) IFI, LTEMP
 !/T        END DO
@@ -634,6 +636,12 @@
       XS2    = UNDEF
       XS3    = UNDEF
       XS4    = UNDEF
+!
+!/GLOC      DO ISEA=1,NSEA
+!/GLOC        IX = MAPSF(ISEA,1)
+!/GLOC        IY = MAPSF(ISEA,2)
+!/GLOC        GLOC_ANG(ISEA) = GANGL(IY,IX)
+!/GLOC      ENDDO
 !
 !     Number of print-plots
 !
@@ -731,6 +739,9 @@
                 FORMF  = '(1X,17I7)'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, CX, CY, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, CX, CY, GLOC_ANG)
+
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = CX(1:NSEA)
                    XS2    = CY(1:NSEA)
@@ -758,8 +769,8 @@
                                                           , MAPSF, X1 )
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, CY(1:NSEA)        &
                                                           , MAPSF, X2 )
-                ENDIF 
-! 
+                ENDIF
+!
               ELSE IF ( IFI .EQ. 1 .AND. IFJ .EQ. 3 ) THEN
                 IF ( VECTOR ) THEN
                     FLTWO  = .TRUE.
@@ -771,6 +782,8 @@
                 UNITS  = 'm s-1'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, UA, UD, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, UA, UD, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = UA(1:NSEA)
                    XS2    = UD(1:NSEA)
@@ -851,7 +864,7 @@
 !/BT4                FSC    = 0.01
 !/BT4                UNITS  = 'Krumbein phi scale'
 !/BT4                ENAME  = '.d50'
-!/BT4                WHERE ( SED_D50.NE.UNDEF) SED_D50 = -LOG(SED_D50/0.001)/LOG2 
+!/BT4                WHERE ( SED_D50.NE.UNDEF) SED_D50 = -LOG(SED_D50/0.001)/LOG2
 !/BT4                IF ( ITYPE .EQ. 4 ) THEN
 !/BT4                   XS1    = SED_D50
 !/BT4                ELSE
@@ -865,7 +878,7 @@
 !/IS2               ENAME = '.ic1'
 !/IS2               IF ( ITYPE .EQ. 4) THEN
 !/IS2                  XS1    = ICEH
-!/IS2               ELSE 
+!/IS2               ELSE
 !/IS2               CALL W3S2XY (NSEA, NSEA, NX+1, NY, ICEH, MAPSF, X1 )
 !/IS2               ENDIF
 !
@@ -876,7 +889,7 @@
 !/IS2               ENAME = '.ic5'
 !/IS2               IF ( ITYPE .EQ. 4) THEN
 !/IS2                  XS1    = ICEF
-!/IS2               ELSE 
+!/IS2               ELSE
 !/IS2               CALL W3S2XY (NSEA, NSEA, NX+1, NY, ICEF, MAPSF, X1 )
 !/IS2               ENDIF
 
@@ -886,10 +899,10 @@
                 UNITS  = 'm'
                 ENAME  = '.hs'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = HS 
+                   XS1    = HS
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, HS    , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 2 ) THEN
                 FLONE  = .TRUE.
@@ -897,10 +910,10 @@
                 UNITS  = 'm'
                 ENAME  = '.lm'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = WLM 
+                   XS1    = WLM
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, WLM   , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 3 ) THEN
                 FLONE  = .TRUE.
@@ -908,10 +921,10 @@
                 UNITS  = 's'
                 ENAME  = '.t02'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = T02 
+                   XS1    = T02
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, T02   , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 4 ) THEN
                 FLONE  = .TRUE.
@@ -919,10 +932,10 @@
                 UNITS  = 's'
                 ENAME  = '.t0m1'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = T0M1 
+                   XS1    = T0M1
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, T0M1  , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 5 ) THEN
                 FLONE  = .TRUE.
@@ -933,7 +946,7 @@
                    XS1    = T01
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, T01   , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 6 ) THEN
                 FLONE  = .TRUE.
@@ -944,7 +957,7 @@
                    XS1    = FP0
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, FP0   , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 7 ) THEN
                 FLONE  = .TRUE.
@@ -953,6 +966,8 @@
                 ENAME  = '.dir'
 !/RTD                ! Rotate direction back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3THRTN(NSEA, THM, AnglD, .FALSE.)
+!/GLOC                ! Rotate direction from grid local to north pole
+!/GLOC                CALL W3THRTN(NSEA, THM, GLOC_ANG, .FALSE.)
                 DO ISEA=1, NSEA
                   IF ( THM(ISEA) .NE. UNDEF )                         &
                        THM(ISEA) = MOD ( 630. - RADE*THM(ISEA) , 360. )
@@ -961,7 +976,7 @@
                    XS1    = THM
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, THM   , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 8 ) THEN
                 FLONE  = .TRUE.
@@ -972,7 +987,7 @@
                    XS1    = THS
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, THS   , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 9 ) THEN
                 FLONE  = .TRUE.
@@ -981,16 +996,18 @@
                 ENAME  = '.dp'
 !/RTD                ! Rotate direction back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3THRTN(NSEA, THP0, AnglD, .FALSE.)
+!/GLOC                ! Rotate direction from grid local to north pole
+!/GLOC                CALL W3THRTN(NSEA, THP0, GLOC_ANG, .FALSE.)
                 DO ISEA=1, NSEA
                   IF ( THP0(ISEA) .NE. UNDEF ) THEN
                       THP0(ISEA) = MOD ( 630-RADE*THP0(ISEA) , 360. )
                     END IF
                   END DO
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = THP0 
+                   XS1    = THP0
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, THP0  , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 2 .AND. IFJ .EQ. 10 ) THEN
                 FLONE  = .TRUE.
@@ -1090,7 +1107,7 @@
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PHS(:,IPART)      &
                                                       , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 2 ) THEN
                 FLONE  = .TRUE.
@@ -1102,7 +1119,7 @@
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PTP(:,IPART)      &
                                                       , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 3 ) THEN
                 FLONE  = .TRUE.
@@ -1114,7 +1131,7 @@
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PLP(:,IPART)      &
                                                       , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 4 ) THEN
                 FLONE  = .TRUE.
@@ -1123,6 +1140,8 @@
                 ENAME  = '.pdir'
 !/RTD                ! Rotate direction back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3THRTN(NSEA, PDIR(:,IPART), AnglD, .FALSE.)
+!/GLOC                ! Rotate direction from grid local to north pole
+!/GLOC                CALL W3THRTN(NSEA, PDIR(:,IPART), GLOC_ANG, .FALSE.)
                 DO ISEA=1, NSEA
                   IF ( PDIR(ISEA,IPART) .NE. UNDEF ) THEN
                       PDIR(ISEA,IPART) =                               &
@@ -1134,7 +1153,7 @@
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PDIR(:,IPART)      &
                                                       , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 5 ) THEN
                 FLONE  = .TRUE.
@@ -1146,7 +1165,7 @@
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PSI(:,IPART)      &
                                                       , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 6 ) THEN
                 FLONE  = .TRUE.
@@ -1158,7 +1177,7 @@
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PWS(:,IPART)      &
                                                       , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 7 ) THEN
                 FLONE  = .TRUE.
@@ -1167,6 +1186,8 @@
                 ENAME  = '.pdp'
 !/RTD                  ! Rotate direction back to standard pole
 !/RTD                  IF ( FLAGUNR ) CALL W3THRTN(NSEA, PTHP0(:,IPART), AnglD, .FALSE.)
+!/GLOC                  ! Rotate direction from grid local to north pole
+!/GLOC                  CALL W3THRTN(NSEA, PTHP0(:,IPART), GLOC_ANG, .FALSE.)
                 DO ISEA=1, NSEA
                   IF ( PTHP0(ISEA,IPART) .NE. UNDEF ) THEN
                       PTHP0(ISEA,IPART) =                           &
@@ -1274,10 +1295,10 @@
                 UNITS  = '1'
                 ENAME  = '.tws'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = PWST(:) 
+                   XS1    = PWST(:)
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PWST(:), MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 17 ) THEN
                 FLONE  = .TRUE.
@@ -1285,10 +1306,10 @@
                 UNITS  = '1'
                 ENAME  = '.pnr'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = PNR(:) 
+                   XS1    = PNR(:)
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PNR(:), MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 5 .AND. IFJ .EQ. 1 ) THEN
                 IF ( VECTOR ) THEN
@@ -1302,6 +1323,8 @@
                 UNITS  = 'm s-1'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, UST, USTDIR, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, UST, USTDIR, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = UST   (1:NSEA)
                    XS2    = USTDIR(1:NSEA)
@@ -1388,6 +1411,8 @@
                 ENAME  = '.taw'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, TAUWIX, TAUWIY, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, TAUWIX, TAUWIY, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = TAUWIX(1:NSEA)
                    XS2    = TAUWIY(1:NSEA)
@@ -1432,6 +1457,8 @@
                 ENAME  = '.twa'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, TAUWNX, TAUWNY, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, TAUWNX, TAUWNY, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = TAUWNX(1:NSEA)
                    XS2    = TAUWNY(1:NSEA)
@@ -1521,9 +1548,9 @@
 !/RTD                ! Radition stress components are always left on rotated pole
 !/RTD                ! at present - need to confirm how to de-rotate (A. Saulter)
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = SXX(1:NSEA) 
-                   XS2    = SYY(1:NSEA) 
-                   XS3    = SXY(1:NSEA) 
+                   XS1    = SXX(1:NSEA)
+                   XS2    = SYY(1:NSEA)
+                   XS3    = SXY(1:NSEA)
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, SXX(1:NSEA)       &
                                                           , MAPSF, X1 )
@@ -1544,9 +1571,11 @@
                 ENAME  = '.two'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, TAUOX, TAUOY, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, TAUOX, TAUOY, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = TAUOX(1:NSEA) 
-                   XS2    = TAUOY(1:NSEA) 
+                   XS1    = TAUOX(1:NSEA)
+                   XS2    = TAUOY(1:NSEA)
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, TAUOX(1:NSEA)     &
                                                           , MAPSF, XX )
@@ -1567,8 +1596,8 @@
                   TAUOX(ISEA) = UABS
                   END DO
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS3    = TAUOX(1:NSEA) 
-                   XS4    = TAUOY(1:NSEA) 
+                   XS3    = TAUOX(1:NSEA)
+                   XS4    = TAUOY(1:NSEA)
                 ELSE
                 CALL W3S2XY (NSEA,NSEA,NX+1,NY, TAUOX(1:NSEA)         &
                                                       , MAPSF, X1 )
@@ -1582,11 +1611,11 @@
                 UNITS  = 'N m-1'
                 ENAME  = '.bhd'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = BHD(1:NSEA) 
+                   XS1    = BHD(1:NSEA)
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, BHD(1:NSEA)    &
                                                           , MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 6 .AND. IFJ .EQ. 4 ) THEN
                 FLONE  = .TRUE.
@@ -1597,7 +1626,7 @@
                    PHIOC(ISEA)=MIN(99.98,PHIOC(ISEA))
                    END DO
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = PHIOC(1:NSEA) 
+                   XS1    = PHIOC(1:NSEA)
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, PHIOC(1:NSEA)    &
                                                           , MAPSF, X1 )
@@ -1614,6 +1643,8 @@
                 ENAME  = '.tus'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, TUSX, TUSY, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, TUSX, TUSY, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = TUSX(1:NSEA)
                    XS2    = TUSY(1:NSEA)
@@ -1659,6 +1690,8 @@
                    END DO
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, USSX, USSY, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, USSX, USSY, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = USSX(1:NSEA)
                    XS2    = USSY(1:NSEA)
@@ -1716,6 +1749,8 @@
                 UNITS  = 'm'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, ABA, ABD, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, ABA, ABD, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = ABA(1:NSEA)
                    XS2    = ABD(1:NSEA)
@@ -1758,6 +1793,8 @@
                 UNITS  = 'm s-1'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, UBA, UBD, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, UBA, UBD, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = UBA(1:NSEA)
                    XS2    = UBD(1:NSEA)
@@ -1797,6 +1834,8 @@
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, BEDFORMS(1:NSEA,2), &
 !/RTD                                             BEDFORMS(1:NSEA,3), AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, BEDFORMS(1:NSEA,2), BEDFORMS(1:NSEA,3), GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = BEDFORMS(1:NSEA,1)
                    XS2    = BEDFORMS(1:NSEA,2)
@@ -1830,6 +1869,8 @@
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, TAUBBL(1:NSEA,1), &
 !/RTD                                             TAUBBL(1:NSEA,2), AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, TAUBBL(1:NSEA,1), TAUBBL(1:NSEA,2), GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = TAUBBL(1:NSEA,1)
                    XS2    = TAUBBL(1:NSEA,2)
@@ -1846,12 +1887,14 @@
                   ELSE
                     FLDIR  = .TRUE.
                   END IF
-                FSC    = 1.E-6     
-                ENAME  = '.mss' 
+                FSC    = 1.E-6
+                ENAME  = '.mss'
                 FORMF  = '(1X,20I6)'
                 UNITS  = '1'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, MSSX, MSSY, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, MSSX, MSSY, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = MSSX(1:NSEA)
                    XS2    = MSSY(1:NSEA)
@@ -1873,6 +1916,8 @@
                 UNITS  = '1'
 !/RTD                ! Rotate x,y vector back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3XYRTN(NSEA, MSCX, MSCY, AnglD)
+!/GLOC               ! Rotate x,y vector from grid-local to north pole angle convention
+!/GLOC               CALL W3XYRTN(NSEA, MSCX, MSCY, GLOC_ANG)
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = MSCX(1:NSEA)
                    XS2    = MSCY(1:NSEA)
@@ -1913,6 +1958,8 @@
                 ENAME  = '.msd'
 !/RTD                ! Rotate direction back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3THRTN(NSEA, MSSD, AnglD, .FALSE.)
+!/GLOC                  ! Rotate direction from grid local to north pole
+!/GLOC                  CALL W3THRTN(NSEA, MSSD, GLOC_ANG, .FALSE.)
                 DO ISEA=1, NSEA
                   IF ( MSSD(ISEA) .NE. UNDEF )  THEN
                     MSSD(ISEA) = MOD ( 630. - RADE*MSSD(ISEA) , 180. )
@@ -1931,6 +1978,8 @@
                 ENAME  = '.mcd'
 !/RTD                ! Rotate direction back to standard pole
 !/RTD                IF ( FLAGUNR ) CALL W3THRTN(NSEA, MSCD, AnglD, .FALSE.)
+!/GLOC                  ! Rotate direction from grid local to north pole
+!/GLOC                  CALL W3THRTN(NSEA, MSCD, GLOC_ANG, .FALSE.)
                 DO ISEA=1, NSEA
                   IF ( MSCD(ISEA) .NE. UNDEF )  THEN
                     MSCD(ISEA) = MOD ( 630. - RADE*MSCD(ISEA) , 180. )
@@ -1974,7 +2023,7 @@
                 UNITS  = 's-1'
                 ENAME  = '.fc'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = FCUT 
+                   XS1    = FCUT
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, FCUT  , MAPSF, X1 )
                 ENDIF
@@ -1983,7 +2032,7 @@
                 FLONE  = .TRUE.
                 FSC    = 0.001
                 FSC    = 1.
-                UNITS  = '1' 
+                UNITS  = '1'
                 ENAME  = '.cfx'
                 IF ( ITYPE .EQ. 4 ) THEN
                    XS1    = CFLXYMAX
@@ -1997,10 +2046,10 @@
                 UNITS  = '1'
                 ENAME  = '.cfd'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = CFLTHMAX 
+                   XS1    = CFLTHMAX
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, CFLTHMAX, MAPSF, X1 )
-                ENDIF 
+                ENDIF
 !
               ELSE IF ( IFI .EQ. 9 .AND. IFJ .EQ. 5 ) THEN
                 FLONE  = .TRUE.
@@ -2008,7 +2057,7 @@
                 UNITS  = '1'
                 ENAME  = '.cfk'
                 IF ( ITYPE .EQ. 4 ) THEN
-                   XS1    = CFLKMAX 
+                   XS1    = CFLKMAX
                 ELSE
                 CALL W3S2XY ( NSEA, NSEA, NX+1, NY, CFLKMAX, MAPSF, X1 )
                 ENDIF
@@ -2071,7 +2120,7 @@
                   IXA    = IXB + IXS
                   IXB    = IXA + (NXMAX-1)*IXS
                   IXB    = MIN ( IXB , IXN )
-                  IF ( FLTRI ) THEN 
+                  IF ( FLTRI ) THEN
                       CALL PRTBLK (NDSO, NX, NY, NX+1, X1, MAP, 0,    &
                                    FSC, IXA, IXB, IXS, IY1, IYN, IYS, &
                                    IDOUT(IFI,IFJ), UNITS)
@@ -2157,13 +2206,13 @@
                        MINVAL(YGRD(IY1:IYN,IX1:IXN)),                 &
                        MAXVAL(YGRD(IY1:IYN,IX1:IXN)), IYN-IY1+1,      &
                        ENAME, FSC, UNITS, IDLA, IDFM, FORMF, MFILL
-                  ELSE 
+                  ELSE
                     OPEN (NDSDAT,FILE=FNAME,             &
                     FORM='UNFORMATTED',ERR=800,IOSTAT=IERR)
                     WRITE (NDSDAT) FILEID, TIME,                      &
                          X0,MAXX,NX, &
                          Y0,MAXY,NY, &
-                         ENAME, FSC, UNITS, IDLA, IDFM, FORMF, MFILL  
+                         ENAME, FSC, UNITS, IDLA, IDFM, FORMF, MFILL
                   ENDIF
                 ELSE
                    IF(GTYPE .NE. UNGTYPE) THEN
@@ -2196,7 +2245,7 @@
                       WRITE (NDSDAT, 949) FILEID, TIME,              &
                          X0,MAXX,NX, &
                          Y0,MAXY,NY, &
-                         ENAME, FSC, UNITS, IDLA, IDFM, FORMF, MFILL  
+                         ENAME, FSC, UNITS, IDLA, IDFM, FORMF, MFILL
                      ENDIF
                 END IF
 !
@@ -2239,7 +2288,7 @@
                             END DO
                           END DO
                       END IF
-                ELSE 
+                ELSE
                   IF ( FLTWO .OR. FLDIR ) THEN
                     DO IX=IX1, IXN
                      DO IY=IY1, IYN
@@ -2339,7 +2388,7 @@
                 IF ( FLTWO .OR. FLDIR ) THEN
                   WRITE (NDSDAT,980)  FILEID, TIME, NSEA, 2,       &
                                  FSC, ENAME, UNITS, GNAME
-                  WRITE(NDSDAT, 113)  XS1 
+                  WRITE(NDSDAT, 113)  XS1
                   WRITE(NDSDAT, 113)  XS2
                 ENDIF
                 IF ( FLONE ) THEN
@@ -2349,7 +2398,7 @@
                 ENDIF
 !
                 CLOSE (NDSDAT)
-! 
+!
               END IF
 !
 ! ... End of fields loop
@@ -2410,4 +2459,3 @@
 !/ End of W3OUTF ----------------------------------------------------- /
 !/
       END PROGRAM W3OUTF
-
