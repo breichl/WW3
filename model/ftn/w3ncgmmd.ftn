@@ -77,7 +77,7 @@
            ANGL, SINA, COST, SINT, &
            DADP, DADQ, DADX, DADY, GANGL)
 !/
-        USE W3ODATMD, ONLY: IAPROC, NAPROC
+!        USE W3ODATMD, ONLY: IAPROC, NAPROC
 !/
         CHARACTER(50), INTENT(IN) :: GRID_METRIC_FILENAME
         INTEGER, INTENT(IN)   :: LBI(2), UBI(2)
@@ -127,11 +127,11 @@
 !/
         IF (FIRST) THEN
 
-           IF (IAPROC == NAPROC) THEN
-             WRITE(*,*)'  Reading Grid Metric Terms from file ',&
-                TRIM(GRID_METRIC_FILENAME)
-             WRITE(*,*)'  --------------------------------------------------'
-           endif
+!           IF (IAPROC == NAPROC) THEN
+!             WRITE(*,*)'  Reading Grid Metric Terms from file ',&
+!                TRIM(GRID_METRIC_FILENAME)
+!             WRITE(*,*)'  --------------------------------------------------'
+!           endif
 
            call READ_NC(GRID_METRIC_FILENAME,GRIDINFO%XVAR_NAME )
            call READ_NC(GRID_METRIC_FILENAME,GRIDINFO%YVAR_NAME )
@@ -299,7 +299,7 @@
       SUBROUTINE READ_NC(GRID_METRIC_FILENAME, VAR)
 !/
         USE NETCDF
-        USE W3ODATMD, ONLY: IAPROC, NAPROC
+!        USE W3ODATMD, ONLY: IAPROC, NAPROC
 !/
         CHARACTER(LEN=50), INTENT(IN) &
              :: GRID_METRIC_FILENAME !< The filename for the netCDF file.
@@ -312,9 +312,9 @@
         CHARACTER(LEN=14) :: DIM_NAME(4)
         INTEGER :: RCODE
 
-        IF (IAPROC == NAPROC) THEN
-          WRITE(*,*) '      READING GRID METRIC: ', TRIM(VAR)
-        ENDIF
+!        IF (IAPROC == NAPROC) THEN
+!          WRITE(*,*) '      READING GRID METRIC: ', TRIM(VAR)
+!        ENDIF
 
         RCODE = NF90_OPEN(TRIM(GRID_METRIC_FILENAME), NF90_NOWRITE, NCID)
         CALL CHECKRCODE(RCODE,1)
