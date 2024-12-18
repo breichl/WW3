@@ -188,7 +188,7 @@ module wave_model_mod
       isea = 1
       do ix=is,ie
         do iy=js,je
-          if (isea<nseal) then
+          if (isea<=nseal) then
             ISEA_G   = IAPROC + (ISEA-1)*NAPROC
             jx = MAPSF(ISEA_G,1)
             jy = MAPSF(ISEA_G,2)
