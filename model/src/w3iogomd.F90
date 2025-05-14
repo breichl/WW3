@@ -1088,6 +1088,9 @@ CONTAINS
     CASE('USSH')
       I = 6
       J = 14
+    CASE('USST')
+      I = 6
+      J = 15
       !
       ! Group 7
       !
@@ -1301,7 +1304,8 @@ CONTAINS
     USE W3ADATMD, ONLY: ABA, ABD, UBA, UBD, FCUT, SXX,              &
          SYY, SXY, PHS, PTP, PLP, PDIR, PSI, PWS,    &
          PWST, PNR, USERO, TUSX, TUSY, PRMS, TPMS,   &
-         USSX, USSY, MSSX, MSSY, MSSD, MSCX, MSCY,   &
+         USSX, USSY, USSTX, USSTY,                   &
+         MSSX, MSSY, MSSD, MSCX, MSCY,               &
          MSCD, CHARN,                                &
          BHD, CGE, P2SMS, US3D, EF, TH1M, STH1M,     &
          TH2M, STH2M, HSIG, STMAXE, STMAXD,          &
@@ -1423,6 +1427,8 @@ CONTAINS
     SXY    = 0.
     USSX   = 0.
     USSY   = 0.
+    USSTX  = 0.
+    USSTY  = 0.
     TUSX   = 0.
     TUSY   = 0.
     MSSX   = 0.
@@ -2018,7 +2024,8 @@ CONTAINS
       !
       !       USSX(JSEA)  = USSX(JSEA) + 2*GRAV*ETUSCX(JSEA)/SIG(NK)
       !       USSY(JSEA)  = USSY(JSEA) + 2*GRAV*ETUSCY(JSEA)/SIG(NK)
-
+      USSTX(JSEA)  = USSTX(JSEA) + 2*GRAV*ETUSCX(JSEA)/SIG(NK)
+      USSTY(JSEA)  = USSTY(JSEA) + 2*GRAV*ETUSCY(JSEA)/SIG(NK)
       ! Add tail contribution for surface and layer averaged Stokes drift
       IF (LMPENABLED.and.SDTAIL) then
         USSX(JSEA)  = USSX(JSEA) + 2*GRAV*ETUSCX(JSEA)/SIG(NK)
@@ -2582,7 +2589,8 @@ CONTAINS
          PTHP0, PQP, PPE, PGW, PSW, PTM1, PT1, PT2,  &
          PEP, USERO, TAUOX, TAUOY, TAUWIX, TAUWIY,    &
          PHIAW, PHIOC, TUSX, TUSY, PRMS, TPMS,        &
-         USSX, USSY, MSSX, MSSY, MSSD, MSCX, MSCY,    &
+         USSX, USSY, USSTX, USSTY,                    &
+         MSSX, MSSY, MSSD, MSCX, MSCY,                &
          MSCD, QP, TAUWNX, TAUWNY, CHARN, TWS, BHD,   &
          PHIBBL, TAUBBL, WHITECAP, BEDFORMS, CGE, EF, &
          CFLXYMAX, CFLTHMAX, CFLKMAX, P2SMS, US3D,    &
@@ -2986,6 +2994,10 @@ CONTAINS
           IF ( FLOGRD( 6, 14) ) THEN
             USSHX (ISEA) = UNDEF
             USSHY (ISEA) = UNDEF
+          END IF
+          IF ( FLOGRD( 6, 15) ) THEN
+            USSTX  (ISEA) = UNDEF
+            USSTY  (ISEA) = UNDEF
           END IF
           !
           IF ( FLOGRD( 7, 1) ) THEN
@@ -3603,6 +3615,15 @@ CONTAINS
               WRITE ( NDSOA,* ) 'USSHX:', USSHX(1:NSEA)
               WRITE ( NDSOA,* ) 'USSHY:', USSHY(1:NSEA)
 #endif
+            ELSE IF ( IFI .EQ. 6 .AND. IFJ .EQ. 15 ) THEN
+              WRITE ( NDSOG ) USSTX(1:NSEA)
+#ifdef W3_ASCII
+              WRITE ( NDSOA,* ) 'USSTX:', USSTX(1:NSEA)
+#endif
+              WRITE ( NDSOG ) USSTY(1:NSEA)
+#ifdef W3_ASCII
+              WRITE ( NDSOA,* ) 'USSTY:', USSTY(1:NSEA)
+#endif
               !
               !     Section 7)
               !
@@ -4038,6 +4059,11 @@ CONTAINS
                    USSHX(1:NSEA)
               READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
                    USSHY(1:NSEA)
+            ELSE IF ( IFI .EQ. 6 .AND. IFJ .EQ. 15 ) THEN
+              READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
+                   USSTX(1:NSEA)
+              READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
+                   USSTY(1:NSEA)
 
               !
               !     Section 7)
@@ -4331,7 +4357,7 @@ CONTAINS
     USE W3GDATMD,  ONLY: DDEN, DSII, XFR, SIG, NK, NTH, NSEAl,    &
          ECOS, ESIN, US3DF, USSPF, USSP_WN
     USE W3ADATMD,  ONLY: CG, WN, DW
-    USE W3ADATMD,  ONLY: USSX, USSY,  US3D, USSP
+    USE W3ADATMD,  ONLY: USSX, USSY,  US3D, USSP, USSTX, USSTY
     USE W3ODATMD, ONLY: IAPROC, NAPROC
     USE W3PARALL, ONLY: INIT_GET_ISEA
 #ifdef W3_S
@@ -4353,7 +4379,7 @@ CONTAINS
 #ifdef W3_S
     INTEGER, SAVE           :: IENT = 0
 #endif
-    REAL                    :: FACTOR, FKD,KD
+    REAL                    :: FACTOR, FKD,KD, FACTOR2
     REAL                    :: ABX(NSEAL), ABY(NSEAL), USSCO
     REAL                    :: MINDIFF
     INTEGER                 :: Spc2Bnd(NK)
@@ -4392,6 +4418,23 @@ CONTAINS
     ELSEIF (USS_SWITCH.eq.2) then
       USSP(:,:)=0.0
     ENDIF
+    USSTX = 0.0
+    USSTY = 0.0
+    ABX(:) = 0.0
+    ABY(:) = 0.0
+    DO ITH=1,NTH
+      DO JSEA=1, NSEAL
+        CALL INIT_GET_ISEA(ISEA, JSEA)
+        FACTOR = DDEN(NK) / CG(NK,ISEA)
+        FACTOR2 = SIG(NK)**5/(GRAV**2)/DSII(NK)
+        ABX(JSEA)  = ABX(JSEA) + A(ITH,NK,JSEA)*ECOS(ITH)
+        ABY(JSEA)  = ABY(JSEA) + A(ITH,NK,JSEA)*ESIN(ITH)
+      ENDDO
+
+      USSTX(JSEA)  = USSTX(JSEA) + 2*GRAV*ABX*FACTOR*FACTOR2/SIG(NK)
+      USSTY(JSEA)  = USSTY(JSEA) + 2*GRAV*ABY*FACTOR*FACTOR2/SIG(NK)
+    ENDDO
+
     DO IK=IKST,IKFI   !1, NK
       !
       ! 2.a Initialize energy in band
@@ -4438,6 +4481,8 @@ CONTAINS
         ELSE
           USSCO=FACTOR*SIG(IK)*2.*WN(IK,ISEA)
         END IF
+        USSTX(JSEA)  = USSTX(JSEA) + 2*GRAV*ABX/SIG(NK)
+        USSTY(JSEA)  = USSTY(JSEA) + 2*GRAV*ETUSCY/SIG(NK)
         !
         !
         !USSX(JSEA)  = USSX(JSEA) + ABX(JSEA)*USSCO

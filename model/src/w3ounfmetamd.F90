@@ -3767,6 +3767,30 @@ CONTAINS
     META(2)%VARNS='sea_surface_wave_averaged_stokes_drift_northward_velocity'
     META(2)%VARNG='northward_surface_averaged_stokes_drift'
 
+    ! IFI=6, IFJ=15, USST
+    META => GROUP(6)%FIELD(15)%META
+    META(1)%FSC    = 0.0005
+    META(1)%UNITS  = 'm s-1'
+    META(1)%ENAME  = '.usst'
+
+    ! First component
+    META(1)%VARNM='uusst'
+    META(1)%VARNL='eastward surface stokes drift from tail'
+    META(1)%VARNS='sea_surface_wave_tail_stokes_drift_eastward_velocity'
+    META(1)%VARNG='eastward_tail_surface_stokes_drift'
+    META(1)%VARNC='usst=sqrt(uusst**2+vusst**2)'
+    META(1)%VARND=DIRCOM
+    META(1)%VMIN = -4.95
+    META(1)%VMAX =  4.95
+
+    ! Second component
+    META(2) = META(1)
+    META(2)%VARNM='vusst'
+    META(2)%VARNL='northward surface stokes drift from tail'
+    META(2)%VARNS='sea_surface_wave_tail_stokes_drift_northward_velocity'
+    META(2)%VARNG='northward_tail_surface_stokes_drift'
+    WRITE(META(2)%VARNC,'(A,F8.4,A,F8.4,A)') 'Frequency range ',SIG(1)*TPIINV,' to ',SIG(NK)*TPIINV,' Hz'
+
 
     !
     !---------- GROUP 7 ----------------

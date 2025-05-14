@@ -2193,11 +2193,11 @@ CONTAINS
          SXX, SYY, SXY, USERO, PHS, PTP, PLP,      &
          PDIR, PSI, PWS, PWST, PNR, PHIAW, PHIOC,  &
          TUSX, TUSY, TAUWIX, TAUWIY, TAUOX,        &
-         TAUOY, USSX, USSY, MSSX, MSSY, MSSD,      &
-         MSCX, MSCY, MSCD, PRMS, TPMS, CHARN,      &
-         TWS, TAUWNX, TAUWNY, BHD, CGE,            &
-         CFLXYMAX, CFLTHMAX, CFLKMAX, WHITECAP,    &
-         BEDFORMS, PHIBBL, TAUBBL, T01,            &
+         TAUOY, USSX, USSY, USSTX, USSTY,          &
+         MSSX, MSSY, MSSD, MSCX, MSCY, MSCD,       &
+         PRMS, TPMS, CHARN, TWS, TAUWNX, TAUWNY,   &
+         BHD, CGE, CFLXYMAX, CFLTHMAX, CFLKMAX,    &
+         WHITECAP, BEDFORMS, PHIBBL, TAUBBL, T01,  &
          P2SMS, US3D, EF,  TH1M, STH1M, TH2M,      &
          STH2M, HSIG, PHICE, TAUICE, USSP,         &
          STMAXE, STMAXD, HMAXE, HCMAXE, HMAXD,     &
@@ -3132,6 +3132,24 @@ CONTAINS
           WRITE (NDST,9011) IH, ' 6/14', IROOT, IT, IRQGO(IH), IERR
 #endif
         END IF
+        !
+        IF ( FLGRDALL( 6, 15) ) THEN
+          IH     = IH + 1
+          IT     = IT + 1
+          CALL MPI_SEND_INIT (USSTX (1),NSEALM , MPI_REAL, IROOT,   &
+               IT, MPI_COMM_WAVE, IRQGO(IH), IERR)
+#ifdef W3_MPIT
+          WRITE (NDST,9011) IH, ' 6/06', IROOT, IT, IRQGO(IH), IERR
+#endif
+          IH     = IH + 1
+          IT     = IT + 1
+          CALL MPI_SEND_INIT (USSTY (1),NSEALM , MPI_REAL, IROOT,   &
+               IT, MPI_COMM_WAVE, IRQGO(IH), IERR)
+#ifdef W3_MPIT
+          WRITE (NDST,9011) IH, ' 6/06', IROOT, IT, IRQGO(IH), IERR
+#endif
+        END IF
+        !
         IF ( FLGRDALL( 7, 1) ) THEN
           IH     = IH + 1
           IT     = IT + 1
@@ -4215,6 +4233,23 @@ CONTAINS
                  MPI_COMM_WAVE, IRQGO2(IH), IERR )
 #ifdef W3_MPIT
             WRITE (NDST,9011) IH, ' 6/14', IFROM, IT, IRQGO2(IH), IERR
+#endif
+          END IF
+          !
+          IF ( FLGRDALL( 6, 15) ) THEN
+            IH     = IH + 1
+            IT     = IT + 1
+            CALL MPI_RECV_INIT (USSTX (I0),1,WW3_FIELD_VEC, IFROM, IT,  &
+                 MPI_COMM_WAVE, IRQGO2(IH), IERR )
+#ifdef W3_MPIT
+            WRITE (NDST,9011) IH, ' 6/06', IFROM, IT, IRQGO2(IH), IERR
+#endif
+            IH     = IH + 1
+            IT     = IT + 1
+            CALL MPI_RECV_INIT (USSTY (I0),1,WW3_FIELD_VEC, IFROM, IT,  &
+                 MPI_COMM_WAVE, IRQGO2(IH), IERR )
+#ifdef W3_MPIT
+            WRITE (NDST,9011) IH, ' 6/06', IFROM, IT, IRQGO2(IH), IERR
 #endif
           END IF
           !

@@ -167,6 +167,7 @@ MODULE W3ADATMD
   !      PHIOC     R.A.  Public   Waves to ocean energy flux.
   !      TUSX/Y    R.A.  Public   Volume transport associated to Stokes drift.
   !      USSX/Y    R.A.  Public   Surface Stokes drift.
+  !      USSTX/Y   R.A.  Public   Surface Stokes drift due to tail.
   !      TAUOCX/Y  R.A.  Public   Total ocean momentum flux
   !      TAUICE    R.A.  Public   Wave-ice momentum flux.
   !      PHICE     R.A.  Public   Waves to ice energy flux.
@@ -452,18 +453,18 @@ MODULE W3ADATMD
     ! Output fields group 6)
     !
     REAL, POINTER         ::  SXX(:),  SYY(:),  SXY(:),  TAUOX(:),&
-         TAUOY(:),  BHD(:),  PHIOC(:),       &
-         TUSX(:),  TUSY(:),  USSX(:),        &
-         USSY(:), TAUOCX(:), TAUOCY(:),      &
-         PRMS(:),  TPMS(:), PHICE(:),        &
-         TAUICE(:,:)
+         TAUOY(:),  BHD(:),    PHIOC(:),      &
+         TUSX(:),   TUSY(:),   USSX(:),       &
+         USSY(:),   USSTX(:),  USSTY(:),      &
+         TAUOCX(:), TAUOCY(:), PRMS(:),       &
+         TPMS(:),   PHICE(:),  TAUICE(:,:)
     REAL, POINTER         ::  P2SMS(:,:),  US3D(:,:), USSP(:,:)
     REAL, POINTER         :: XSXX(:), XSYY(:), XSXY(:), XTAUOX(:),&
-         XTAUOY(:), XBHD(:), XPHIOC(:),       &
-         XTUSX(:), XTUSY(:), XUSSX(:),        &
-         XUSSY(:), XTAUOCX(:), XTAUOCY(:),    &
-         XPRMS(:), XTPMS(:), XPHICE(:),       &
-         XTAUICE(:,:)
+         XTAUOY(:),  XBHD(:),    XPHIOC(:),   &
+         XTUSX(:),   XTUSY(:),   XUSSX(:),    &
+         XUSSY(:),   XUSSTX(:),  XUSSTY(:),   &
+         XTAUOCX(:), XTAUOCY(:), XPRMS(:),    &
+         XTPMS(:),   XPHICE(:),  XTAUICE(:,:)
     REAL, POINTER         :: XP2SMS(:,:), XUS3D(:,:), XUSSP(:,:)
     REAL, POINTER         :: XUSSHX(:), XUSSHY(:)
     !
@@ -614,6 +615,7 @@ MODULE W3ADATMD
   REAL, POINTER           :: SXX(:), SYY(:), SXY(:), TAUOX(:),    &
        TAUOY(:), BHD(:), PHIOC(:),          &
        TUSX(:), TUSY(:), USSX(:), USSY(:),  &
+       USSTX(:), USSTY(:),                  &
        TAUOCX(:), TAUOCY(:), PRMS(:),       &
        TPMS(:), PHICE(:), TAUICE(:,:)
   REAL, POINTER           :: P2SMS(:,:), US3D(:,:), USSP(:,:)
@@ -1203,6 +1205,8 @@ CONTAINS
          WADATS(IMOD)%TUSY  (NSEALM) ,                        &
          WADATS(IMOD)%USSX  (NSEALM) ,                        &
          WADATS(IMOD)%USSY  (NSEALM) ,                        &
+         WADATS(IMOD)%USSTX (NSEALM) ,                        &
+         WADATS(IMOD)%USSTY (NSEALM) ,                        &
          WADATS(IMOD)%TAUOCX(NSEALM) ,                        &
          WADATS(IMOD)%TAUOCY(NSEALM) ,                        &
          WADATS(IMOD)%PRMS  (NSEALM) ,                        &
@@ -1241,6 +1245,8 @@ CONTAINS
     WADATS(IMOD)%TUSY   = UNDEF
     WADATS(IMOD)%USSX   = UNDEF
     WADATS(IMOD)%USSY   = UNDEF
+    WADATS(IMOD)%USSTX  = UNDEF
+    WADATS(IMOD)%USSTY  = UNDEF
     WADATS(IMOD)%TAUOCX = UNDEF
     WADATS(IMOD)%TAUOCY = UNDEF
     WADATS(IMOD)%PRMS   = UNDEF
@@ -2182,6 +2188,18 @@ CONTAINS
       CHECK_ALLOC_STATUS ( ISTAT )
     END IF
     !
+    IF ( OUTFLAGS( 6, 15) ) THEN
+      ALLOCATE ( WADATS(IMOD)%XUSSTX(NXXX), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+      ALLOCATE ( WADATS(IMOD)%XUSSTY(NXXX), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    ELSE
+      ALLOCATE ( WADATS(IMOD)%XUSSTX(1), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+      ALLOCATE ( WADATS(IMOD)%XUSSTY(1), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    END IF
+    !
     WADATS(IMOD)%XSXX    = UNDEF
     WADATS(IMOD)%XSYY    = UNDEF
     WADATS(IMOD)%XSXY    = UNDEF
@@ -2193,6 +2211,8 @@ CONTAINS
     WADATS(IMOD)%XTUSY   = UNDEF
     WADATS(IMOD)%XUSSX   = UNDEF
     WADATS(IMOD)%XUSSY   = UNDEF
+    WADATS(IMOD)%XUSSTX  = UNDEF
+    WADATS(IMOD)%XUSSTY  = UNDEF
     WADATS(IMOD)%XPRMS   = UNDEF
     WADATS(IMOD)%XTPMS   = UNDEF
     WADATS(IMOD)%XUS3D   = UNDEF
@@ -2931,6 +2951,8 @@ CONTAINS
       TUSY   => WADATS(IMOD)%TUSY
       USSX   => WADATS(IMOD)%USSX
       USSY   => WADATS(IMOD)%USSY
+      USSTX  => WADATS(IMOD)%USSTX
+      USSTY  => WADATS(IMOD)%USSTY
       PRMS   => WADATS(IMOD)%PRMS
       TPMS   => WADATS(IMOD)%TPMS
       P2SMS  => WADATS(IMOD)%P2SMS
@@ -3276,6 +3298,8 @@ CONTAINS
       TUSY   => WADATS(IMOD)%XTUSY
       USSX   => WADATS(IMOD)%XUSSX
       USSY   => WADATS(IMOD)%XUSSY
+      USSTX  => WADATS(IMOD)%XUSSTX
+      USSTY  => WADATS(IMOD)%XUSSTY
       PRMS   => WADATS(IMOD)%XPRMS
       TPMS   => WADATS(IMOD)%XTPMS
       P2SMS  => WADATS(IMOD)%XP2SMS

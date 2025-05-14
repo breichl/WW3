@@ -187,7 +187,8 @@ PROGRAM W3OUNF
        PTHP0, PQP, PSW, PPE, PGW, QP,               &
        TAUOX, TAUOY, TAUWIX,                        &
        TAUWIY, PHIAW, PHIOC, TUSX, TUSY, PRMS, TPMS,&
-       USSX, USSY, MSSX, MSSY, MSSD, MSCX, MSCY,    &
+       USSX, USSY, USSTX, USSTY,                    &
+       MSSX, MSSY, MSSD, MSCX, MSCY,                &
        MSCD, CHARN, TWS, TAUA, TAUADIR,USSHX,USSHY, &
        TAUWNX, TAUWNY, BHD, T02, HSIG, CGE,         &
        T01, BEDFORMS, WHITECAP, TAUBBL, PHIBBL,     &
@@ -1873,6 +1874,35 @@ CONTAINS
             CALL S2GRID(USSHX(1:NSEA), XX)
             CALL S2GRID(USSHY(1:NSEA), XY)
             !
+            NFIELD=2
+            !
+            ! Surface stokes drift
+          ELSE IF ( IFI .EQ. 6 .AND. IFJ .EQ. 15 ) THEN
+            DO ISEA=1, NSEA
+              USSTX(ISEA)=MAX(-0.9998,MIN(0.9998,USSTX(ISEA)))
+              USSTY(ISEA)=MAX(-0.9998,MIN(0.9998,USSTY(ISEA)))
+            END DO
+#ifdef W3_RTD
+            ! Rotate x,y vector back to standard pole
+            IF ( FLAGUNR ) CALL W3XYRTN(NSEA, USSTX(1:NSEA), USSTY(1:NSEA), AnglD)
+#endif
+            CALL S2GRID(USSTX(1:NSEA), XX)
+            CALL S2GRID(USSTY(1:NSEA), XY)
+            !! Commented out unnecessary statements below for time being
+            !! TAUWIX, TAUWIY are in north-east convention and X1,X2
+            !! are not actually written out below
+            !DO ISEA=1, NSEA
+            !  CABS   = SQRT(USSTX(ISEA)**2+USSTY(ISEA)**2)
+            !  IF ( CABS .NE. UNDEF ) THEN
+            !      USSY(ISEA) = MOD ( 630. -                         &
+            !            RADE*ATAN2(USSTY(ISEA),USSTX(ISEA)) , 360. )
+            !    ELSE
+            !      USSTY(ISEA) = UNDEF
+            !    END IF
+            !  USSTX(ISEA) = CABS
+            !  END DO
+            !CALL W3S2XY ( NSEA, NSEA, NX+1, NY,USSTX,MAPSF, X1 )
+            !CALL W3S2XY ( NSEA, NSEA, NX+1, NY,USSTY,MAPSF, X2 )
             NFIELD=2
             !
             ! RMS of bottom displacement amplitude

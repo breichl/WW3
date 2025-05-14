@@ -163,7 +163,8 @@ PROGRAM W3OUTF
        SKEW, EMBIA1, EMBIA2,                       &
        TAUOX, TAUOY, TAUWIX,BHD,                   &
        TAUWIY, PHIAW, PHIOC, TUSX, TUSY, PRMS, TPMS,&
-       USSX, USSY, MSSX, MSSY, MSCX, MSCY, CHARN,  &
+       USSX, USSY, USSTX, USSTY,                   &
+       MSSX, MSSY, MSCX, MSCY, CHARN,              &
        TAUWNX, TAUWNY, TAUBBL, PHIBBL, CFLXYMAX,   &
        CFLTHMAX, CFLKMAX, BEDFORMS, WHITECAP, T02, &
        CGE, T01, HSIG, STMAXE, STMAXD, HMAXE,      &
@@ -1991,7 +1992,55 @@ CONTAINS
               CALL W3S2XY ( NSEA, NSEA, NX+1, NY, USSHY(1:NSEA),     &
                    MAPSF, X2 )
             ENDIF
-
+            !
+          ELSE IF ( IFI .EQ. 6 .AND. IFJ .EQ. 15 ) THEN
+            IF ( VECTOR ) THEN
+              FLTWO  = .TRUE.
+            ELSE
+              FLDIR  = .TRUE.
+            END IF
+            FSC    = 0.001
+            UNITS  = 'm s-1'
+            ENAME  = '.usst'
+            DO ISEA=1, NSEA
+              IF (USSTX(ISEA) .NE. UNDEF ) THEN
+                USSTX(ISEA)=MAX(-0.9998,MIN(0.9998,USSTX(ISEA)))
+                USSTY(ISEA)=MAX(-0.9998,MIN(0.9998,USSTY(ISEA)))
+              END IF
+            END DO
+#ifdef W3_RTD
+            ! Rotate x,y vector back to standard pole
+            IF ( FLAGUNR ) CALL W3XYRTN(NSEA, USSTX, USSTY, AnglD)
+#endif
+            IF ( ITYPE .EQ. 4 ) THEN
+              XS1    = USSTX(1:NSEA)
+              XS2    = USSTY(1:NSEA)
+            ELSE
+              CALL W3S2XY ( NSEA, NSEA, NX+1, NY, USSTX(1:NSEA)     &
+                   , MAPSF, XX )
+              CALL W3S2XY ( NSEA, NSEA, NX+1, NY, USSTY(1:NSEA)     &
+                   , MAPSF, XY )
+            ENDIF
+            DO ISEA=1, NSEA
+              CABS   = SQRT(USSTX(ISEA)**2+USSTY(ISEA)**2)
+              IF ( USSTX(ISEA)  .NE. UNDEF ) THEN
+                USSTY(ISEA) = MOD ( 630. -                      &
+                     RADE*ATAN2(USSTY(ISEA),USSTX(ISEA)) , 360. )
+              ELSE
+                USSTY(ISEA) = UNDEF
+                CABS       = UNDEF
+              END IF
+              USSTX(ISEA) = CABS
+            END DO
+            IF ( ITYPE .EQ. 4 ) THEN
+              XS3    = USSTX(1:NSEA)
+              XS4    = USSTY(1:NSEA)
+            ELSE
+              CALL W3S2XY ( NSEA, NSEA, NX+1, NY, USSTX(1:NSEA),     &
+                   MAPSF, X1 )
+              CALL W3S2XY ( NSEA, NSEA, NX+1, NY, USSTY(1:NSEA),     &
+                   MAPSF, X2 )
+            ENDIF
             !
           ELSE IF ( IFI .EQ. 7 .AND. IFJ .EQ. 1 ) THEN
             IF ( VECTOR ) THEN
