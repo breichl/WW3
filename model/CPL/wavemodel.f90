@@ -109,7 +109,14 @@ module wave_model_mod
       Wav%ustkb_glo(:,:,:) = 0.0
       allocate(Wav%vstkb_glo(1:NX,1:NY,Wav%num_stk_bands))
       Wav%vstkb_glo(:,:,:) = 0.0
-
+      allocate(Wav%hs_glo(1:NX,1:NY,1))
+      Wav%hs_glo(:,:,:) = 0.0
+      allocate(Wav%ust_glo(1:NX,1:NY,1))
+      Wav%ust_glo(:,:,:) = 0.0
+      allocate(Wav%ustdir_glo(1:NX,1:NY,1))
+      Wav%ustdir_glo(:,:,:) = 0.0
+      allocate(Wav%charn_glo(1:NX,1:NY,1))
+      Wav%charn_glo(:,:,:) = 0.0
       return
     end subroutine wave_model_init
 
@@ -124,7 +131,8 @@ module wave_model_mod
       use w3gdatmd, only: NX, NY
       use w3idatmd, only: wx0, wxN, wy0, wyN, TW0, TWN, &
                           cx0, cxN, cy0, cyN, TC0, TCN
-      use w3adatmd, only: ussx, ussy, ussp
+      use w3adatmd, only: ussx, ussy, ussp, charn, hs
+      use w3wdatmd, only: ust, ustdir
       use w3gdatmd, only: nseal, mapsf, NK
       use w3odatmd, only: iaproc, naproc
       ! Subroutine arguments
@@ -140,7 +148,6 @@ module wave_model_mod
       integer :: b
 
       integer :: glob_loc_x(NX,NY), glob_loc_y(NX,NY)
-
       !----------------------------------------------------------------------
       !Convert the ending time of this call into WW3 time format, which
       ! is integer(2) :: (YYYYMMDD, HHMMSS)
@@ -183,7 +190,7 @@ module wave_model_mod
 
       Wav%glob_loc_X(:,:) = 0
       Wav%glob_loc_Y(:,:) = 0
-
+      
       call mpp_get_compute_domain( Wav%domain, is, ie, js, je )
       isea = 1
       do ix=is,ie
@@ -198,6 +205,11 @@ module wave_model_mod
               Wav%ustkb_mpp(ix,iy,b) = USSP(isea,b)
               Wav%vstkb_mpp(ix,iy,b) = USSP(isea,NK+b)
             enddo
+            ! send wave variables to coupler and atmospheric model, added by Biao
+            Wav%hs(ix,iy,1) = HS(isea)
+            Wav%ust_wav(ix,iy,1) = UST(isea_g)
+            Wav%ustdir_wav(ix,iy,1) = USTDIR(isea_g)
+            Wav%charn_wav(ix,iy,1) = CHARN(isea)
           endif
           isea = isea+1
         end do
@@ -207,11 +219,22 @@ module wave_model_mod
         call mpp_global_field(Wav%domain,Wav%ustkb_mpp(:,:,b),wav%ustkb_glo(:,:,b))
         call mpp_global_field(Wav%domain,Wav%vstkb_mpp(:,:,b),wav%vstkb_glo(:,:,b))
       enddo
+
+      call mpp_global_field(Wav%domain,Wav%hs,wav%hs_glo)
+      call mpp_global_field(Wav%domain,Wav%ust_wav,wav%ust_glo)
+      call mpp_global_field(Wav%domain,Wav%ustdir_wav,wav%ustdir_glo)
+      call mpp_global_field(Wav%domain,Wav%charn_wav,wav%charn_glo)
+
       call mpp_global_field(Wav%domain,Wav%glob_loc_X,glob_loc_X)
       call mpp_global_field(Wav%domain,Wav%glob_loc_Y,glob_loc_Y)
 
       Wav%ustkb_mpp(:,:,:) = 0.0
       Wav%vstkb_mpp(:,:,:) = 0.0
+
+      Wav%hs(:,:,:)        = 0.0
+      Wav%ust_wav(:,:,:)   = 0.0
+      Wav%ustdir_wav(:,:,:)= 0.0
+      Wav%charn_wav(:,:,:) = 0.0
 
       isea = 1
       do ix=1,NX
@@ -223,12 +246,15 @@ module wave_model_mod
                 Wav%ustkb_mpp(Pix,Piy,b) = wav%ustkb_glo(ix,iy,b)
                 Wav%vstkb_mpp(Pix,Piy,b) = wav%vstkb_glo(ix,iy,b)
               enddo
+                Wav%hs(Pix,Piy,1) = wav%hs_glo(ix,iy,1)
+                Wav%ust_wav(Pix,Piy,1) = wav%ust_glo(ix,iy,1)
+                Wav%ustdir_wav(Pix,Piy,1) = wav%ustdir_glo(ix,iy,1)
+                Wav%charn_wav(Pix,Piy,1) = wav%charn_glo(ix,iy,1)
            endif
          enddo
       enddo
 
       !----------------------------------------------------------------------
-
       return
     end subroutine update_wave_model
 

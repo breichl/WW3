@@ -20,9 +20,15 @@ type wave_data_type
   real, pointer, dimension(:) :: stk_wavenumbers => NULL() !< Used for stokes drift
 
   ! These fields are used to provide information about the waves to the atmosphere/ocean/ice
-  real, pointer, dimension(:,:) :: &
-       HS => NULL() !< The significant wave height [m]
-
+  real, pointer, dimension(:,:,:) :: &
+       HS => NULL(),         & !< The significant wave height [m]
+       ust_wav => NULL(),    & !< The friction velocity [m/s]
+       ustdir_wav => NULL(), & !< The direction of friction velocity [radians]
+       charn_wav => NULL(),  & !< The Charnock parameter [dimensionless]
+       hs_glo    => NULL(),  &
+       ust_glo   => NULL(),  &
+       ustdir_glo => NULL(), &
+       charn_glo  => NULL()
   real, pointer, dimension(:,:,:) :: &
        ustkb_mpp => NULL(), &
        vstkb_mpp => NULL(), &
@@ -48,7 +54,6 @@ type atmos_wave_boundary_type
    real, dimension(:,:,:), pointer :: & ! (lon, lat,tile)
         wavgrd_u10_glo => NULL(), & !
         wavgrd_v10_glo => NULL()
-
    integer :: xtype             !REGRID, REDIST or DIRECT
 
 end type atmos_wave_boundary_type
