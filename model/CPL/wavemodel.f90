@@ -93,6 +93,8 @@ module wave_model_mod
       Ice2Waves%wavgrd_ucurr_glo(1:NX,1:NY,1) = 0.0
       allocate(Ice2Waves%wavgrd_vcurr_glo(1:NX,1:NY,1))
       Ice2Waves%wavgrd_vcurr_glo(1:NX,1:NY,1) = 0.0
+      allocate(Ice2Waves%wavgrd_Ice_glo(1:NX,1:NY,1))
+      Ice2Waves%wavgrd_Ice_glo(1:NX,1:NY,1) = 0.0
 
       if (usspf(1).gt.usspf(2)) then
         print*,'usspf(1): ',usspf(1)
@@ -106,17 +108,21 @@ module wave_model_mod
       Wav%stk_wavenumbers(:) = USSP_WN(usspf(1):usspf(2))
 
       allocate(Wav%ustkb_glo(1:NX,1:NY,Wav%num_stk_bands))
-      Wav%ustkb_glo(:,:,:) = 0.0
       allocate(Wav%vstkb_glo(1:NX,1:NY,Wav%num_stk_bands))
-      Wav%vstkb_glo(:,:,:) = 0.0
       allocate(Wav%hs_glo(1:NX,1:NY,1))
-      Wav%hs_glo(:,:,:) = 0.0
       allocate(Wav%ust_glo(1:NX,1:NY,1))
-      Wav%ust_glo(:,:,:) = 0.0
       allocate(Wav%ustdir_glo(1:NX,1:NY,1))
-      Wav%ustdir_glo(:,:,:) = 0.0
       allocate(Wav%charn_glo(1:NX,1:NY,1))
-      Wav%charn_glo(:,:,:) = 0.0
+      allocate(Wav%tauox_glo(1:NX,1:NY,1))
+      allocate(Wav%tauoy_glo(1:NX,1:NY,1))
+      Wav%ustkb_glo(:,:,:)  = 0.0
+      Wav%vstkb_glo(:,:,:)  = 0.0
+      Wav%hs_glo(:,:,:)     = 0.0
+      Wav%ust_glo(:,:,:)    = 0.0
+      Wav%ustdir_glo(:,:,:) = 0.0
+      Wav%charn_glo(:,:,:)  = 0.0
+      Wav%tauox_glo(:,:,:)  = 0.0
+      Wav%tauoy_glo(:,:,:)  = 0.0
       return
     end subroutine wave_model_init
 
@@ -130,9 +136,10 @@ module wave_model_mod
       use wmwavemd, only: wmwave
       use w3gdatmd, only: NX, NY
       use w3idatmd, only: wx0, wxN, wy0, wyN, TW0, TWN, &
-                          cx0, cxN, cy0, cyN, TC0, TCN
-      use w3adatmd, only: ussx, ussy, ussp, charn, hs
-      use w3wdatmd, only: ust, ustdir
+                          cx0, cxN, cy0, cyN, ICEI, TC0, TCN
+      use w3adatmd, only: ussx, ussy, ussp, &
+                          charn, hs, tauox, tauoy
+      use w3wdatmd, only: UST, USTDIR
       use w3gdatmd, only: nseal, mapsf, NK
       use w3odatmd, only: iaproc, naproc
       ! Subroutine arguments
@@ -171,17 +178,20 @@ module wave_model_mod
       TC0(:) = TSTRT(:,1)
       TCN(:) = TEND(:,1)
       call mpp_global_field(Wav%domain,atm2waves%wavgrd_u10_mpp(:,:,:),atm2waves%wavgrd_u10_glo(:,:,:))
-      wx0(:,:) = atm2waves%wavgrd_u10_glo(:,:,1)
+      wx0(:,:) = Atm2Waves%wavgrd_u10_glo(:,:,1)
       wxN(:,:) = wx0(:,:)
       call mpp_global_field(Wav%domain,atm2waves%wavgrd_v10_mpp(:,:,:),atm2waves%wavgrd_v10_glo(:,:,:))
-      wy0(:,:) = atm2waves%wavgrd_v10_glo(:,:,1)
+      wy0(:,:) = Atm2Waves%wavgrd_v10_glo(:,:,1)
       wyN(:,:) = wy0(:,:)
       call mpp_global_field(Wav%domain,ice2waves%wavgrd_ucurr_mpp(:,:,:),ice2waves%wavgrd_ucurr_glo(:,:,:))
-      cx0(:,:) = ice2waves%wavgrd_ucurr_glo(:,:,1)
+      cx0(:,:) = Ice2Waves%wavgrd_ucurr_glo(:,:,1)
       cxN(:,:) = cx0(:,:)
       call mpp_global_field(Wav%domain,ice2waves%wavgrd_vcurr_mpp(:,:,:),ice2waves%wavgrd_vcurr_glo(:,:,:))
-      cy0(:,:) = ice2waves%wavgrd_vcurr_glo(:,:,1)
+      cy0(:,:) = Ice2Waves%wavgrd_vcurr_glo(:,:,1)
       cyN(:,:) = cy0(:,:)
+
+      call mpp_global_field(Wav%domain,ice2waves%wavgrd_Ice_mpp(:,:,:),ice2waves%wavgrd_Ice_glo(:,:,:))
+      ICEI(:,:) = Ice2Waves%wavgrd_Ice_glo(:,:,1)
       ! write(*,*)'Into wave model U10 max: ',maxval(atm2Waves%U_10_global),maxval(wx0)
       ! write(*,*)'Into wave model V10 max: ',maxval(atm2Waves%V_10_global),maxval(wy0)
       ! write(*,*)'Into wave model UO max: ',maxval(ice2Waves%Ucurr_global),maxval(cx0)
@@ -206,10 +216,12 @@ module wave_model_mod
               Wav%vstkb_mpp(ix,iy,b) = USSP(isea,NK+b)
             enddo
             ! send wave variables to coupler and atmospheric model, added by Biao
-            Wav%hs(ix,iy,1) = HS(isea)
-            Wav%ust_wav(ix,iy,1) = UST(isea_g)
-            Wav%ustdir_wav(ix,iy,1) = USTDIR(isea_g)
-            Wav%charn_wav(ix,iy,1) = CHARN(isea)
+            Wav%hs(ix,iy,1)          = HS(isea)
+            Wav%ust_wav(ix,iy,1)     = UST(isea_g)
+            Wav%ustdir_wav(ix,iy,1)  = USTDIR(isea_g)
+            Wav%charn_wav(ix,iy,1)   = CHARN(isea)
+            Wav%tauox_wav(ix,iy,1)   = TAUOX(isea)
+            Wav%tauoy_wav(ix,iy,1)   = TAUOY(isea)
           endif
           isea = isea+1
         end do
@@ -224,17 +236,20 @@ module wave_model_mod
       call mpp_global_field(Wav%domain,Wav%ust_wav,wav%ust_glo)
       call mpp_global_field(Wav%domain,Wav%ustdir_wav,wav%ustdir_glo)
       call mpp_global_field(Wav%domain,Wav%charn_wav,wav%charn_glo)
+      call mpp_global_field(Wav%domain,Wav%tauox_wav,wav%tauox_glo)
+      call mpp_global_field(Wav%domain,Wav%tauoy_wav,wav%tauoy_glo)
 
       call mpp_global_field(Wav%domain,Wav%glob_loc_X,glob_loc_X)
       call mpp_global_field(Wav%domain,Wav%glob_loc_Y,glob_loc_Y)
 
-      Wav%ustkb_mpp(:,:,:) = 0.0
-      Wav%vstkb_mpp(:,:,:) = 0.0
-
-      Wav%hs(:,:,:)        = 0.0
-      Wav%ust_wav(:,:,:)   = 0.0
-      Wav%ustdir_wav(:,:,:)= 0.0
-      Wav%charn_wav(:,:,:) = 0.0
+      Wav%ustkb_mpp(:,:,:)  = 0.0
+      Wav%vstkb_mpp(:,:,:)  = 0.0
+      Wav%hs(:,:,:)         = 0.0
+      Wav%ust_wav(:,:,:)    = 0.0
+      Wav%ustdir_wav(:,:,:) = 0.0
+      Wav%charn_wav(:,:,:)  = 0.0
+      Wav%tauox_wav(:,:,:)  = 0.0
+      Wav%tauoy_wav(:,:,:)  = 0.0
 
       isea = 1
       do ix=1,NX
@@ -250,6 +265,8 @@ module wave_model_mod
                 Wav%ust_wav(Pix,Piy,1) = wav%ust_glo(ix,iy,1)
                 Wav%ustdir_wav(Pix,Piy,1) = wav%ustdir_glo(ix,iy,1)
                 Wav%charn_wav(Pix,Piy,1) = wav%charn_glo(ix,iy,1)
+                Wav%tauox_wav(Pix,Piy,1) = wav%tauox_glo(ix,iy,1)
+                Wav%tauoy_wav(Pix,Piy,1) = wav%tauoy_glo(ix,iy,1)
            endif
          enddo
       enddo
@@ -278,6 +295,15 @@ module wave_model_mod
       deallocate(Atm2Waves%wavgrd_v10_glo)
       deallocate(Ice2Waves%wavgrd_ucurr_glo)
       deallocate(Ice2Waves%wavgrd_vcurr_glo)
+      deallocate(Ice2Waves%wavgrd_Ice_glo)
+      deallocate(Waves%ustkb_glo)
+      deallocate(Waves%vstkb_glo)
+      deallocate(Waves%hs_glo)
+      deallocate(Waves%ust_glo)
+      deallocate(Waves%ustdir_glo)
+      deallocate(Waves%charn_glo)
+      deallocate(Waves%tauox_glo)
+      deallocate(Waves%tauoy_glo)
       CALL MPI_BARRIER ( MPI_COMM, IERR_MPI ) !Do we need this?
       !----------------------------------------------------------------------
 

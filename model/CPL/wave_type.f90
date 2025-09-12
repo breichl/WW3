@@ -21,14 +21,21 @@ type wave_data_type
 
   ! These fields are used to provide information about the waves to the atmosphere/ocean/ice
   real, pointer, dimension(:,:,:) :: &
-       HS => NULL(),         & !< The significant wave height [m]
-       ust_wav => NULL(),    & !< The friction velocity [m/s]
-       ustdir_wav => NULL(), & !< The direction of friction velocity [radians]
-       charn_wav => NULL(),  & !< The Charnock parameter [dimensionless]
-       hs_glo    => NULL(),  &
-       ust_glo   => NULL(),  &
-       ustdir_glo => NULL(), &
-       charn_glo  => NULL()
+       HS         => NULL(),  & !< Significant wave height [m]
+       ust_wav    => NULL(),  & !< Friction velocity [m/s]
+       ustdir_wav => NULL(),  & !< Direction of friction velocity [radians]
+       charn_wav  => NULL(),  & !< Charnock parameter [dimensionless]
+       tauox_wav  => NULL(),  & !< Wave to ocean momentum flux in X-direction
+       tauoy_wav  => NULL()     !< Wave to ocean momentum flux in y-direction
+
+real, pointer, dimension(:,:,:) :: &
+       hs_glo     => NULL(),  &
+       ust_glo    => NULL(),  &
+       ustdir_glo => NULL(),  &
+       charn_glo  => NULL(),  &
+       tauox_glo  => NULL(),  &
+       tauoy_glo  => NULL()
+
   real, pointer, dimension(:,:,:) :: &
        ustkb_mpp => NULL(), &
        vstkb_mpp => NULL(), &
@@ -38,12 +45,6 @@ type wave_data_type
   integer, dimension(:,:), pointer :: & ! (lon, lat,tile)
        glob_loc_X => NULL(), & !
        glob_loc_Y => NULL()
-
-  ! These fields provide information from the atmosphere/ocean/ice to the waves
-  real, pointer, dimension(:,:) :: &
-       U10 => NULL(), &
-       V10 => NULL(), &
-       ICE_CONCENTRATION => NULL()
 
 end type wave_data_type
 
@@ -63,8 +64,12 @@ type ice_wave_boundary_type
    real, dimension(:,:,:), pointer :: & ! (lon, lat,tile)
         wavgrd_Ucurr_mpp => NULL(), & !
         wavgrd_Vcurr_mpp => NULL(), & !
+        wavgrd_Ice_mpp => NULL()
+
+   real, dimension(:,:,:), pointer :: & ! (lon, lat,tile)
         wavgrd_ucurr_glo => NULL(), & !
-        wavgrd_vcurr_glo => NULL()
+        wavgrd_vcurr_glo => NULL(), & !
+        wavgrd_Ice_glo => NULL()
 
    real, dimension(:,:,:,:), pointer :: & ! (lon, lat,tile,Nstk)
         icegrd_ustkb_mpp => NULL(), & !
