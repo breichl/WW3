@@ -155,6 +155,7 @@ module wave_model_mod
       integer :: b
 
       integer :: glob_loc_x(NX,NY), glob_loc_y(NX,NY)
+      logical :: is_west, is_east, is_south, is_north
       !----------------------------------------------------------------------
       !Convert the ending time of this call into WW3 time format, which
       ! is integer(2) :: (YYYYMMDD, HHMMSS)
@@ -242,6 +243,7 @@ module wave_model_mod
       call mpp_global_field(Wav%domain,Wav%glob_loc_X,glob_loc_X)
       call mpp_global_field(Wav%domain,Wav%glob_loc_Y,glob_loc_Y)
 
+
       Wav%ustkb_mpp(:,:,:)  = 0.0
       Wav%vstkb_mpp(:,:,:)  = 0.0
       Wav%hs(:,:,:)         = 0.0
@@ -251,7 +253,6 @@ module wave_model_mod
       Wav%tauox_wav(:,:,:)  = 0.0
       Wav%tauoy_wav(:,:,:)  = 0.0
 
-      isea = 1
       do ix=1,NX
          do iy=1,NY
            Pix = glob_loc_X(ix,iy)
@@ -270,6 +271,22 @@ module wave_model_mod
            endif
          enddo
       enddo
+     
+     ! Added by Biao,  WW3 flags the points at four boudaries as excluded, so those cells stay 0.
+     ! Before coupling to MOM6/SHiELD, call fill_boundary to copy the nearest
+     ! interior row/column to these four lines, preventing zeros on domain edges.
+     is_west  = (is == 1)
+     is_east  = (ie == NX)
+     is_south = (js == 1)
+     is_north = (je == NY)
+     call fill_boundary(Wav%ustkb_mpp,  is_west, is_east, is_south, is_north)
+     call fill_boundary(Wav%vstkb_mpp,  is_west, is_east, is_south, is_north) 
+     call fill_boundary(Wav%hs,         is_west, is_east, is_south, is_north)
+     call fill_boundary(Wav%ust_wav,    is_west, is_east, is_south, is_north)
+     call fill_boundary(Wav%ustdir_wav, is_west, is_east, is_south, is_north)
+     call fill_boundary(Wav%charn_wav,  is_west, is_east, is_south, is_north)
+     call fill_boundary(Wav%tauox_wav,  is_west, is_east, is_south, is_north)
+     call fill_boundary(Wav%tauoy_wav,  is_west, is_east, is_south, is_north)
 
       !----------------------------------------------------------------------
       return
@@ -309,6 +326,32 @@ module wave_model_mod
 
       return
     end subroutine wave_model_end
+   
+    !> This subroutine copies the nearest interior row/column onto the outer lines, added by Biao 
+    subroutine fill_boundary(field, is_west, is_east, is_south, is_north)
+      implicit none
+      real, intent(inout) :: field(:,:,:)
+      logical, intent(in) :: is_west, is_east, is_south, is_north
+      !   local variables
+      integer :: nxl,nyl,nzl
 
+      nxl = size(field,1)
+      nyl = size(field,2)
+      nzl = size(field,3)
+      
+      ! Fill the four sides from the adjacent inner column/row 
+      if (is_west) field(1, 1:nyl, 1:nzl)   = field(2, 1:nyl,1:nzl)
+      if (is_east) field(nxl, 1:nyl, 1:nzl) = field(nxl-1, 1:nyl,1:nzl)
+      if (is_south) field(1:nxl, 1, 1:nzl)   = field(1:nxl, 2, 1:nzl)
+      if (is_north) field(1:nxl, nyl, 1:nzl) = field(1:nxl, nyl-1, 1:nzl)
+       
+      ! Corners use the mean of the two adjacent inner points
+      if (is_west  .and. is_south) field(1,   1,   1:nzl) = 0.5*( field(2,   1,   1:nzl) + field(1,   2,   1:nzl) )
+      if (is_east  .and. is_south) field(nxl, 1,   1:nzl) = 0.5*( field(nxl-1,1,   1:nzl) + field(nxl, 2,   1:nzl) )
+      if (is_west  .and. is_north) field(1,   nyl, 1:nzl) = 0.5*( field(2,   nyl, 1:nzl) + field(1,   nyl-1,1:nzl) )
+      if (is_east  .and. is_north) field(nxl, nyl, 1:nzl) = 0.5*( field(nxl-1,nyl,1:nzl) + field(nxl, nyl-1,1:nzl) )
+
+      return
+   end subroutine fill_boundary
 
 end module wave_model_mod
